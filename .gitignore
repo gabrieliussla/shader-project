@@ -1,0 +1,9 @@
+#ignore all object files
+*.o
+*.gch
+
+#ignore the executable
+/run
+
+#ignore all 'other' files
+/other/
