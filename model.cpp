@@ -18,17 +18,8 @@ struct edge_hash{
     }
 };
 
-Model::Model(char *path){
-    loadModel(path);
-}
-
-void Model::draw(Shader shader){
-    for(Mesh mesh : meshes){
-        mesh.draw(shader);
-    }
-}
-
-void Model::loadModel(string path){
+Model::Model(string path, int mode){
+    // Load model using assimp
     Assimp::Importer importer;
     const aiScene *scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
     if(!scene || !scene->mRootNode || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE){
@@ -37,10 +28,16 @@ void Model::loadModel(string path){
     }
     dir = path.substr(0, path.find_last_of('/'));
 
-    processScene(scene);
+    processScene(scene, mode);
 }
 
-void Model::processScene(const aiScene *scene){
+void Model::draw(Shader shader){
+    for(Mesh mesh : meshes){
+        mesh.draw(shader);
+    }
+}
+
+void Model::processScene(const aiScene *scene, int mode){
     aiNode *rootNode = scene->mRootNode;
     vector<aiNode*> stack;
     aiNode *node;
@@ -50,7 +47,10 @@ void Model::processScene(const aiScene *scene){
         stack.pop_back();
         for(int i=0; i<node->mNumMeshes; i++){
             aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
-            meshes.push_back(processEdgeMesh(mesh, scene));
+            switch(mode){
+                case  0: meshes.push_back(processSimpleMesh(mesh, scene));   break;
+                case  1: meshes.push_back(processEdgeMesh(mesh, scene));     break;
+            } 
         }
         for(int i=0; i<node->mNumChildren; i++){
             stack.push_back(node->mChildren[i]);

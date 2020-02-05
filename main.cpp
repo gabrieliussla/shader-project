@@ -16,6 +16,8 @@
 
 //----- Globals -----//
 
+int MODE = 1;
+
 int screenWidth = 600;
 int screenHeight = 600;
 
@@ -114,27 +116,37 @@ int main()
     // Create a viewport to span the whole window
     glViewport(0, 0, screenWidth, screenHeight);
 
+
+    //----- Set Up -----//
+
     // Compile shaders
-    Shader shaders("shaders/shader.vert", "shaders/shader.frag");
+    string name;
+    switch(MODE){
+        case  0: name = "simple";   break;
+        case  1: name = "edge";     break;
+    }
+    Shader shaders(("shaders/"+name+".vert").c_str(), ("shaders/"+name+".frag").c_str());
 
-
-    //----- Render -----//
-
-    // Setup
-    Model fish((char*)"models/fish.obj");
-
+    // Setup model
+    Model fish("models/fish.obj", MODE);
+    
+    // Enable shaders
     glEnable(GL_DEPTH_TEST);
     shaders.use();
-
+    
+    // Set up static matrices
     glm::mat4 view = glm::lookAt(cameraPos, cameraPos+cameraFront, cameraUp);
     shaders.setMat4((char*)"view", view);
 
     glm::mat4 projection = glm::perspective(1.2f, (float)screenWidth/(float)screenHeight, 0.1f, 100.0f);
     shaders.setMat4((char*)"projection", projection);
-
+    
+    // Background colour
     glClearColor(0.2f, 0.2f, 0.3f, 1.0f);
 
-    // Loop
+
+    //----- Render Loop -----//
+
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
