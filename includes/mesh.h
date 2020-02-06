@@ -18,7 +18,7 @@ struct EdgeVertex{
     glm::vec3 nv;   //vertex normal
     glm::vec3 nA;   //face A normal
     glm::vec3 nB;   //face B normal
-    int kind;       //what kind of vertex it is (outer:0, inner:1, cap:2)
+    short kind;       //what kind of vertex it is (outer:0, inner:1, cap:2)
 };
 
 class Mesh{

@@ -8,7 +8,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <glm/ext.hpp>
-#include <glm/gtx/string_cast.hpp>
+#include <glm/gtx/string_cast.hpp> // for testing
 
 #include "shader.h"
 #include "model.h"
@@ -135,6 +135,8 @@ int main()
     shaders.use();
     
     // Set up static matrices
+    glm::mat4 model;
+
     glm::mat4 view = glm::lookAt(cameraPos, cameraPos+cameraFront, cameraUp);
     shaders.setMat4((char*)"view", view);
 
@@ -142,7 +144,7 @@ int main()
     shaders.setMat4((char*)"projection", projection);
     
     // Background colour
-    glClearColor(0.2f, 0.2f, 0.3f, 1.0f);
+    glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
 
 
     //----- Render Loop -----//
@@ -153,7 +155,8 @@ int main()
         if (processInput(window)) {
             view = glm::lookAt(cameraPos, cameraPos+cameraFront, cameraUp);
             shaders.setMat4((char*)"view", view);
-       }
+            //cout << to_string(projection * view * model * glm::vec4(1.421292, 0.127575, -0.477435, 1.0)) << "\n";
+        }
 
         //changes that depend on time
         float timeValue = (float)glfwGetTime();
@@ -161,7 +164,7 @@ int main()
         lastFrameTime = timeValue;
 
         float rotationValue = (sin(timeValue*2 + cos(timeValue*2)) - 1) * 0.4;
-        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0.0, -0.4, 0.0));
         model = glm::rotate(model, rotationValue, glm::vec3(0.0, 0.0, 1.0));
         model = glm::translate(model, glm::vec3(0.0, 0.5, 0.0));
