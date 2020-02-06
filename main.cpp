@@ -83,10 +83,18 @@ bool processInput(GLFWwindow* window)
 }
 
 
+
+
+glm::vec2 screen(glm::mat4 projection, glm::vec3 vector){
+    glm::vec4 proj_vector = projection * glm::vec4(vector, 1.0);
+    return glm::vec2(proj_vector.x/proj_vector.w, proj_vector.y/proj_vector.w);
+}
+
 //----- Main Function -----//
 
 int main()
 {
+
     //----- Initialise libraries and view window -----//
 
     // Initialise glfw
@@ -132,6 +140,7 @@ int main()
     
     // Enable shaders
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
     shaders.use();
     
     // Set up static matrices
@@ -155,7 +164,7 @@ int main()
         if (processInput(window)) {
             view = glm::lookAt(cameraPos, cameraPos+cameraFront, cameraUp);
             shaders.setMat4((char*)"view", view);
-            //cout << to_string(projection * view * model * glm::vec4(1.421292, 0.127575, -0.477435, 1.0)) << "\n";
+            //cout << to_string(projection * view * model * glm::vec4(1.4, 2.4, 0.0, 1.0)) << "\n";
         }
 
         //changes that depend on time
@@ -163,7 +172,7 @@ int main()
         deltaTime = timeValue - lastFrameTime;
         lastFrameTime = timeValue;
 
-        float rotationValue = (sin(timeValue*2 + cos(timeValue*2)) - 1) * 0.4;
+        float rotationValue = 0;(sin(timeValue*2 + cos(timeValue*2)) - 1) * 0.4;
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0.0, -0.4, 0.0));
         model = glm::rotate(model, rotationValue, glm::vec3(0.0, 0.0, 1.0));

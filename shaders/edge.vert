@@ -1,10 +1,11 @@
 #version 330 core
 
 layout (location = 0) in vec3 v;
-layout (location = 1) in vec3 nv;
-layout (location = 2) in vec3 nA;
-layout (location = 3) in vec3 nB;
-layout (location = 4) in int kind;
+layout (location = 1) in vec3 v2;
+layout (location = 2) in vec3 nv;
+layout (location = 3) in vec3 nA;
+layout (location = 4) in vec3 nB;
+layout (location = 5) in int kind;
 
 out vec3 colour;
 
@@ -21,30 +22,30 @@ void main()
 {
     // find transformation matrix
     mat4 M = projection * view * model;
-    //M = mat4(1.0);
-    float depth = (M * vec4(v, 1.0)).w;
+    vec4 pos = (M * vec4(v, 1.0));
 
     // calculate witdh multiplier
-    float width = 2.0;
+    float w = 0.02;
     // ...
 
     // calculate 2D coordinates
-    vec2 s = screen(M, v);                  // screen coordinate of vertex
-    vec2 m = normalize(screen(M, nv));      // vertex normal
-    vec2 p = normalize(screen(M, nA+nB));   // perpendicular to edge
+    vec2 s  = screen(M, v);
+    vec2 s2 = screen(M, v2);
+    vec2 p  = normalize(vec2(s.y-s2.y, s2.x-s.x));
+    vec2 m  = normalize(screen(M, v));
 
     switch(kind){
         case 0:
-            gl_Position = vec4(s+0.01*p, 0.5, 1.0);
-            colour = vec3(1.0, 0.0, 0.0); break;
+            gl_Position = pos+vec4(w*p, 0.0, 0.0);
+            colour = vec3(0.0, 0.0, 0.0); break;
         case 1:
-            gl_Position = vec4(s-0.01*p, 0.5, 1.0);
-            colour = vec3(0.0, 1.0, 0.0); break;
+            gl_Position = pos-vec4(w*p, 0.0, 0.0);
+            colour = vec3(0.0, 0.0, 0.0); break;
         case 2:
-            gl_Position = vec4(s+0.01*m, 0.5, 1.0);
-            colour = vec3(0.0, 0.0, 1.0); break;
+            gl_Position = pos+vec4(w*m, 0.0, 0.0);
+            colour = vec3(1.0, 1.0, 0.0); break;
         default:
-            gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
-            colour = vec3(0.8, 0.8, 0.8); break;
+            gl_Position = pos;
+            colour = vec3(0.0, 0.0, 0.0); break;
     }
 }

@@ -70,12 +70,17 @@ void EdgeMesh::setUpMesh(){
     vector<unsigned int> indices;
     indices.reserve(length);
     for(unsigned int i=0; i<edgeVertices.size(); i+=6){
-        unsigned int edge[12] = {i, i+1, i+2, i+1, i+2, i+3, i, i+2, i+4, i+1, i+3, i+5};
+        unsigned int edge[12] = {i, i+2, i+1, i, i+1, i+3, i, i+4, i+2, i+1, i+5, i+3};
         indices.insert(indices.end(), begin(edge), end(edge));
     }
     
 
     // TEST ////////////////////
+    //vector<EdgeVertex> vec(edgeVertices.begin(), edgeVertices.begin()+6);
+    //edgeVertices = vec;
+    //vector<unsigned int> newVec(indices.begin(), indices.begin()+6);
+    //indices = newVec;
+    //length= 6;
     /*
     edgeVertices.clear();
     edgeVertices=addtovec(edgeVertices,glm::vec3(1.496475, 0.127575, 0.000000),glm::vec3(-0.396698, -0.916073, 0.058660),glm::vec3(-0.574199, -0.738601, 0.353218),glm::vec3(-0.512164, -0.738790, -0.438039),0);
@@ -85,14 +90,6 @@ void EdgeMesh::setUpMesh(){
     edgeVertices=addtovec(edgeVertices,glm::vec3(1.496475, 0.127575, 0.000000),glm::vec3(-0.396698, -0.916073, 0.058660),glm::vec3(-0.574199, -0.738601, 0.353218),glm::vec3(-0.512164, -0.738790, -0.438039),2);
     edgeVertices=addtovec(edgeVertices,glm::vec3(1.500000, 0.150000, 0.000000),glm::vec3(-0.261776, -0.533038, 0.804577),glm::vec3(-0.574199, -0.738601, 0.353218),glm::vec3(-0.512164, -0.738790, -0.438039),2);
     
-    edgeVertices.clear();
-    edgeVertices=addtovec(edgeVertices,glm::vec3(-0.8, 0.3, 0.2),glm::vec3(-0.396698, -0.916073, 0.058660),glm::vec3(-0.574199, -0.738601, 0.353218),glm::vec3(-0.512164, -0.738790, -0.438039),0);
-    edgeVertices=addtovec(edgeVertices,glm::vec3(0.7, -0.8,-0.4),glm::vec3(-0.261776, -0.533038, 0.804577),glm::vec3(-0.574199, -0.738601, 0.353218),glm::vec3(-0.512164, -0.738790, -0.438039),0);
-    edgeVertices=addtovec(edgeVertices,glm::vec3(-0.4, 0.7, 0.3),glm::vec3(-0.396698, -0.916073, 0.058660),glm::vec3(-0.574199, -0.738601, 0.353218),glm::vec3(-0.512164, -0.738790, -0.438039),1);
-    edgeVertices=addtovec(edgeVertices,glm::vec3(0.7, -0.8, 0.8),glm::vec3(-0.261776, -0.533038, 0.804577),glm::vec3(-0.574199, -0.738601, 0.353218),glm::vec3(-0.512164, -0.738790, -0.438039),1);
-    edgeVertices=addtovec(edgeVertices,glm::vec3(-0.8, 0.1, 0.2),glm::vec3(-0.396698, -0.916073, 0.058660),glm::vec3(-0.574199, -0.738601, 0.353218),glm::vec3(-0.512164, -0.738790, -0.438039),2);
-    edgeVertices=addtovec(edgeVertices,glm::vec3(0.7, -0.1,-0.5),glm::vec3(-0.261776, -0.533038, 0.804577),glm::vec3(-0.574199, -0.738601, 0.353218),glm::vec3(-0.512164, -0.738790, -0.438039),2);
-
     indices.clear();
     indices.push_back(0);
     indices.push_back(1);
@@ -108,16 +105,15 @@ void EdgeMesh::setUpMesh(){
     indices.push_back(5);
 
     length = 12;
-
-    for(EdgeVertex v : edgeVertices){
-        cout << to_string(v.v) << "\t" << to_string(v.nv) << "\t" << to_string(v.nA) << "\t" << to_string(v.nB) << "\t" << v.kind << "\n";
-    }
-    for(unsigned int i : indices){
-        cout << i;
-    }
-    cout << "\n";
-    //////////////////////////////
 */
+    //for(EdgeVertex v : edgeVertices){
+    //    cout << to_string(v.v) << "\t" << to_string(v.nv) << "\t" << to_string(v.nA) << "\t" << to_string(v.nB) << "\t" << v.kind << "\n";
+    //}
+    //for(unsigned int i : indices){
+    //    cout << i;
+    //}
+    //cout << "\n";
+
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
@@ -133,17 +129,20 @@ void EdgeMesh::setUpMesh(){
     glEnableVertexAttribArray(0); //v
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(EdgeVertex), (void*)0);
     
-    glEnableVertexAttribArray(1); //nv (vertex normal)
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(EdgeVertex), (void*)offsetof(EdgeVertex, nv));
+    glEnableVertexAttribArray(1); //v2
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(EdgeVertex), (void*)offsetof(EdgeVertex, v2));
 
-    glEnableVertexAttribArray(2); //nA (face normal)
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(EdgeVertex), (void*)offsetof(EdgeVertex, nA));
+    glEnableVertexAttribArray(2); //nv
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(EdgeVertex), (void*)offsetof(EdgeVertex, nv));
 
-    glEnableVertexAttribArray(3); //nB (face normal)
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(EdgeVertex), (void*)offsetof(EdgeVertex, nB));
+    glEnableVertexAttribArray(3); //nA
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(EdgeVertex), (void*)offsetof(EdgeVertex, nA));
 
-    glEnableVertexAttribArray(4); //kind
-    glVertexAttribIPointer(4, 1, GL_SHORT, sizeof(EdgeVertex), (void*)offsetof(EdgeVertex, kind));
+    glEnableVertexAttribArray(4); //nB
+    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(EdgeVertex), (void*)offsetof(EdgeVertex, nB));
+
+    glEnableVertexAttribArray(5); //kind
+    glVertexAttribIPointer(5, 1, GL_SHORT, sizeof(EdgeVertex), (void*)offsetof(EdgeVertex, kind));
 
     glBindVertexArray(0); //unbind VAO
 }

@@ -15,6 +15,7 @@ struct Vertex{
 
 struct EdgeVertex{
     glm::vec3 v;    //vertex position
+    glm::vec3 v2;   //other vertex position
     glm::vec3 nv;   //vertex normal
     glm::vec3 nA;   //face A normal
     glm::vec3 nB;   //face B normal

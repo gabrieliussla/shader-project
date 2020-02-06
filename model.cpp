@@ -127,8 +127,10 @@ Mesh Model::processEdgeMesh(aiMesh *mesh, const aiScene *scene){
                 for(int kind=0; kind<3; kind++){
                     edgev.kind = kind;
                     edgev.v    = v1;
+                    edgev.v2   = v2;
                     edgeVertices.push_back(edgev);
                     edgev.v    = v2;
+                    edgev.v2   = v1;
                     edgeVertices.push_back(edgev);
                 }
                 edgeMap.erase(edge);
