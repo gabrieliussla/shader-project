@@ -53,9 +53,10 @@ void SimpleMesh::setUpMesh(){
     glBindVertexArray(0); //unbind VAO
 }
 
-vector<EdgeVertex> addtovec(vector<EdgeVertex> vector, glm::vec3 v, glm::vec3 nv, glm::vec3 nA, glm::vec3 nB, short kind){
+vector<EdgeVertex> addtovec(vector<EdgeVertex> vector, glm::vec3 v, glm::vec3 v2, glm::vec3 nv, glm::vec3 nA, glm::vec3 nB, short kind){ //TESTING
     EdgeVertex e;
     e.v = v;
+    e.v2 = v2;
     e.nv = nv;
     e.nA = nA;
     e.nB = nB;
@@ -76,36 +77,22 @@ void EdgeMesh::setUpMesh(){
     
 
     // TEST ////////////////////
-    //vector<EdgeVertex> vec(edgeVertices.begin(), edgeVertices.begin()+6);
+    //vector<EdgeVertex> vec(edgeVertices.begin(), edgeVertices.begin()+60);
     //edgeVertices = vec;
-    //vector<unsigned int> newVec(indices.begin(), indices.begin()+6);
+    //vector<unsigned int> newVec(indices.begin(), indices.begin()+60);
     //indices = newVec;
-    //length= 6;
-    /*
-    edgeVertices.clear();
-    edgeVertices=addtovec(edgeVertices,glm::vec3(1.496475, 0.127575, 0.000000),glm::vec3(-0.396698, -0.916073, 0.058660),glm::vec3(-0.574199, -0.738601, 0.353218),glm::vec3(-0.512164, -0.738790, -0.438039),0);
-    edgeVertices=addtovec(edgeVertices,glm::vec3(1.500000, 0.150000, 0.000000),glm::vec3(-0.261776, -0.533038, 0.804577),glm::vec3(-0.574199, -0.738601, 0.353218),glm::vec3(-0.512164, -0.738790, -0.438039),0);
-    edgeVertices=addtovec(edgeVertices,glm::vec3(1.496475, 0.127575, 0.000000),glm::vec3(-0.396698, -0.916073, 0.058660),glm::vec3(-0.574199, -0.738601, 0.353218),glm::vec3(-0.512164, -0.738790, -0.438039),1);
-    edgeVertices=addtovec(edgeVertices,glm::vec3(1.500000, 0.150000, 0.000000),glm::vec3(-0.261776, -0.533038, 0.804577),glm::vec3(-0.574199, -0.738601, 0.353218),glm::vec3(-0.512164, -0.738790, -0.438039),1);
-    edgeVertices=addtovec(edgeVertices,glm::vec3(1.496475, 0.127575, 0.000000),glm::vec3(-0.396698, -0.916073, 0.058660),glm::vec3(-0.574199, -0.738601, 0.353218),glm::vec3(-0.512164, -0.738790, -0.438039),2);
-    edgeVertices=addtovec(edgeVertices,glm::vec3(1.500000, 0.150000, 0.000000),glm::vec3(-0.261776, -0.533038, 0.804577),glm::vec3(-0.574199, -0.738601, 0.353218),glm::vec3(-0.512164, -0.738790, -0.438039),2);
+    //length= 60;
     
-    indices.clear();
-    indices.push_back(0);
-    indices.push_back(1);
-    indices.push_back(2);
-    indices.push_back(1);
-    indices.push_back(2);
-    indices.push_back(3);
-    indices.push_back(0);
-    indices.push_back(2);
-    indices.push_back(4);
-    indices.push_back(1);
-    indices.push_back(3);
-    indices.push_back(5);
+    //edgeVertices.clear();
+    //edgeVertices=addtovec(edgeVertices,glm::vec3(0.0, 0.0, 0.0),glm::vec3(1.0, 1.0, 0.0),glm::vec3(-0.8, 0.2, 0.0),glm::vec3(-0.5, -0.7, 0.3),glm::vec3(-0.5, -0.7, -0.4),0);
+    //edgeVertices=addtovec(edgeVertices,glm::vec3(1.0, 1.0, 0.0),glm::vec3(0.0, 0.0, 0.0),glm::vec3( 0.2, 0.8, 0.0),glm::vec3(-0.5, -0.7, 0.3),glm::vec3(-0.5, -0.7, -0.4),0);
+    //edgeVertices=addtovec(edgeVertices,glm::vec3(0.0, 0.0, 0.0),glm::vec3(1.0, 1.0, 0.0),glm::vec3(-0.8, 0.2, 0.0),glm::vec3(-0.5, -0.7, 0.3),glm::vec3(-0.5, -0.7, -0.4),1);
+    //edgeVertices=addtovec(edgeVertices,glm::vec3(1.0, 1.0, 0.0),glm::vec3(0.0, 0.0, 0.0),glm::vec3( 0.2, 0.8, 0.0),glm::vec3(-0.5, -0.7, 0.3),glm::vec3(-0.5, -0.7, -0.4),1);
+    //edgeVertices=addtovec(edgeVertices,glm::vec3(0.0, 0.0, 0.0),glm::vec3(1.0, 1.0, 0.0),glm::vec3(-0.8, 0.2, 0.0),glm::vec3(-0.5, -0.7, 0.3),glm::vec3(-0.5, -0.7, -0.4),2);
+    //edgeVertices=addtovec(edgeVertices,glm::vec3(1.0, 1.0, 0.0),glm::vec3(0.0, 0.0, 0.0),glm::vec3( 0.2, 0.8, 0.0),glm::vec3(-0.5, -0.7, 0.3),glm::vec3(-0.5, -0.7, -0.4),2);
 
-    length = 12;
-*/
+    //length = 12;
+
     //for(EdgeVertex v : edgeVertices){
     //    cout << to_string(v.v) << "\t" << to_string(v.nv) << "\t" << to_string(v.nA) << "\t" << to_string(v.nB) << "\t" << v.kind << "\n";
     //}

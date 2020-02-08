@@ -45,7 +45,7 @@ bool processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
-    float cameraSpeed = deltaTime * 4;
+    float cameraSpeed = deltaTime * 2;
     float cameraTurnSpeed = deltaTime * 2;
     bool move = false;
     bool turn = false;
@@ -140,7 +140,6 @@ int main()
     
     // Enable shaders
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
     shaders.use();
     
     // Set up static matrices
