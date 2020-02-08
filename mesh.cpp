@@ -77,11 +77,11 @@ void EdgeMesh::setUpMesh(){
     
 
     // TEST ////////////////////
-    //vector<EdgeVertex> vec(edgeVertices.begin(), edgeVertices.begin()+60);
+    //vector<EdgeVertex> vec(edgeVertices.begin()+12000, edgeVertices.begin()+17000);
     //edgeVertices = vec;
-    //vector<unsigned int> newVec(indices.begin(), indices.begin()+60);
+    //vector<unsigned int> newVec(indices.begin(), indices.begin()+6000);
     //indices = newVec;
-    //length= 60;
+    //length= 3000;
     
     //edgeVertices.clear();
     //edgeVertices=addtovec(edgeVertices,glm::vec3(0.0, 0.0, 0.0),glm::vec3(1.0, 1.0, 0.0),glm::vec3(-0.8, 0.2, 0.0),glm::vec3(-0.5, -0.7, 0.3),glm::vec3(-0.5, -0.7, -0.4),0);

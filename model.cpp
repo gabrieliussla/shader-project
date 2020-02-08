@@ -18,6 +18,11 @@ struct edge_hash{
     }
 };
 
+glm::vec3 to_vec3(aiMesh *mesh, aiVector3D v){
+    glm::vec3 vector = glm::vec3(v.x, v.y, v.z);
+    return vector;
+}
+
 Model::Model(string path, int mode){
     // Load model using assimp
     Assimp::Importer importer;
@@ -63,14 +68,9 @@ Mesh Model::processSimpleMesh(aiMesh *mesh, const aiScene *scene){
     vector<unsigned int> indices;
     for(int i=0; i<mesh->mNumVertices; i++){
         Vertex vertex;
-        glm::vec3 vector;
-        vector.x = mesh->mVertices[i].x;
-        vector.y = mesh->mVertices[i].y;
-        vector.z = mesh->mVertices[i].z;
+        glm::vec3 vector = to_vec3(mesh, mesh->mVertices[i]);
         vertex.position = vector;
-        vector.x = mesh->mNormals[i].x;
-        vector.y = mesh->mNormals[i].y;
-        vector.z = mesh->mNormals[i].z;
+        vector = to_vec3(mesh, mesh->mNormals[i]);
         vertex.normal = vector;
         vertices.push_back(vertex);
     }
@@ -92,37 +92,37 @@ Mesh Model::processEdgeMesh(aiMesh *mesh, const aiScene *scene){
 
     for(int i=0; i<mesh->mNumFaces; i++){
         aiFace face = mesh->mFaces[i];
-        glm::vec3 faceNormal;
-        faceNormal.x = mesh->mNormals[i].x;
-        faceNormal.y = mesh->mNormals[i].y;
-        faceNormal.z = mesh->mNormals[i].z;
-        for(int j=0; j<face.mNumIndices; j++){ //to iterate through edges
-            aiVector3D v = mesh->mVertices[face.mIndices[j]];
-            glm::vec3 v1;
-            v1.x = v.x;
-            v1.y = v.y;
-            v1.z = v.z;
+        glm::vec3 faceNormal = to_vec3(mesh, mesh->mNormals[i]);
 
+        //calculating face normal
+        glm::vec3 c1 = to_vec3(mesh, mesh->mVertices[face.mIndices[0]]);
+        glm::vec3 c2 = to_vec3(mesh, mesh->mVertices[face.mIndices[1]]);
+        glm::vec3 c3 = to_vec3(mesh, mesh->mVertices[face.mIndices[2]]);
+        glm::vec3 myNormal = glm::cross(c1-c2, c1-c3);
+
+        for(int j=0; j<face.mNumIndices; j++){
+            // assign both vertices of edge
+            glm::vec3 v1 = to_vec3(mesh, mesh->mVertices[face.mIndices[j]]);
+            glm::vec3 v2 = to_vec3(mesh, mesh->mVertices[face.mIndices[(j+1)%face.mNumIndices]]);
+            
+            // add face normal to vertex normal
             if(vertexMap.find(v1) != vertexMap.end())
-                vertexMap[v1] += faceNormal;
+                vertexMap[v1] += myNormal;//faceNormal;
             else
-                vertexMap[v1] = faceNormal;
-
-            v = mesh ->mVertices[face.mIndices[(j+1)%face.mNumIndices]];
-            glm::vec3 v2;
-            v2.x = v.x;
-            v2.y = v.y;
-            v2.z = v.z;
+                vertexMap[v1] = myNormal;//faceNormal;
+            
+            // lexically order edges
             if(v1.x > v2.x || (v1.x == v2.x && (v1.y > v2.y || (v1.y == v2.y && v1.z > v2.z)))){
                 glm::vec3 temp = v1;
                 v1 = v2;
                 v2 = temp;
             }
-            
+
+            // include face normal or add edge vertices to the list
             tuple<glm::vec3, glm::vec3> edge = make_tuple(v1, v2);
             if(edgeMap.find(edge) != edgeMap.end()){
                 EdgeVertex edgev;
-                edgev.nA   = faceNormal;
+                edgev.nA   = myNormal;//faceNormal;
                 edgev.nB   = edgeMap[edge];
                 for(int kind=0; kind<3; kind++){
                     edgev.kind = kind;

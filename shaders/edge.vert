@@ -41,13 +41,13 @@ void main()
     switch(kind){
         case 0:
             gl_Position = pos+vec4(w*p, 0.0, 0.0);
-            colour = vec3(0.0, 0.0, 0.0); break;
+            colour = vec3(0.1, 0.1, 0.1); break;
         case 1:
             gl_Position = pos-vec4(w*p, 0.0, 0.0);
-            colour = vec3(0.0, 0.0, 0.0); break;
+            colour = vec3(0.1, 0.1, 0.1); break;
         case 2:
-            gl_Position = pos+vec4(m*0.8, 0.0, 0.0);
-            colour = vec3(0.0, 1.0, 0.0); break;
+            gl_Position = pos+vec4(w*m, 0.0, 0.0);
+            colour = vec3(0.9, 0.1, 0.1); break;
         default:
             gl_Position = pos;
             colour = vec3(0.0, 0.0, 0.0); break;

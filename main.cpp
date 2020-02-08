@@ -152,7 +152,7 @@ int main()
     shaders.setMat4((char*)"projection", projection);
     
     // Background colour
-    glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
+    glClearColor(0.7f, 0.7f, 0.7f, 1.0f);
 
 
     //----- Render Loop -----//
