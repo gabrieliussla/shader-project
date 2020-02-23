@@ -13,6 +13,7 @@ class Shader {
         void setBool(char* name, bool value);
         void setInt(char* name, int value);
         void setFloat(char* name, float value);
+        void setVec3(char* name, glm::vec3 value);
         void setMat4(char* name, glm::mat4 value);
 };
 

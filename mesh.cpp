@@ -21,7 +21,7 @@ EdgeMesh::EdgeMesh(vector<EdgeVertex> edgeVertices){
     setUpMesh();
 }
 
-void Mesh::draw(Shader shader){
+void Mesh::draw(){
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, length, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
@@ -71,7 +71,7 @@ void EdgeMesh::setUpMesh(){
     vector<unsigned int> indices;
     indices.reserve(length);
     for(unsigned int i=0; i<edgeVertices.size(); i+=6){
-        unsigned int edge[12] = {i, i+2, i+1, i, i+1, i+3, i, i+4, i+2, i+1, i+5, i+3};
+        unsigned int edge[12] = {i, i+2, i+3, i, i+3, i+1, i, i+4, i+2, i+1, i+3, i+5};
         indices.insert(indices.end(), begin(edge), end(edge));
     }
     

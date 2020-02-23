@@ -10,9 +10,9 @@ LDFLAGS=-Wl,-rpath,/usr/local/lib -lGL -lglfw3 -lrt -lm -ldl -lX11 -lpthread -lx
 $(TARGET) : $(OBJECTFILES)
 	$(CXX) -o $@ $^ $(LDFLAGS)
 %.o : %.cpp
-	$(CXX) -c $(IFLAGS) $^
+	$(CXX) -o $@ -c $(IFLAGS) $^
 %.o : %.c
-	$(CC) -c $(IFLAGS) $^
+	$(CC) -o $@ -c $(IFLAGS) $^
 clean:
 	rm -f *.o
 	rm -f *.gch

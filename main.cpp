@@ -16,16 +16,14 @@
 
 //----- Globals -----//
 
-int MODE = 1;
-
 int screenWidth = 600;
 int screenHeight = 600;
 
 float deltaTime;
 float lastFrameTime;
 
-glm::vec3 cameraPos = glm::vec3(6.9,1.2,8.6);
-glm::vec3 cameraFront = glm::vec3(-0.5,0,-0.8);
+glm::vec3 cameraPos = glm::vec3(-1.4, 2.9, -2.2);//glm::vec3(4.2, 3.2, 6.2);
+glm::vec3 cameraFront = glm::vec3(0.5, 0.0, 0.8);//glm::vec3(-0.5,0,-0.8);
 glm::vec3 cameraUp = glm::vec3(0.0, 1.0, 0.0);
 float cameraYaw = -0.56;
 
@@ -82,9 +80,6 @@ bool processInput(GLFWwindow* window)
     return move || turn;
 }
 
-
-
-
 glm::vec2 screen(glm::mat4 projection, glm::vec3 vector){
     glm::vec4 proj_vector = projection * glm::vec4(vector, 1.0);
     return glm::vec2(proj_vector.x/proj_vector.w, proj_vector.y/proj_vector.w);
@@ -128,31 +123,36 @@ int main()
     //----- Set Up -----//
 
     // Compile shaders
-    string name;
-    switch(MODE){
-        case  0: name = "simple";   break;
-        case  1: name = "edge";     break;
-    }
-    Shader shaders(("shaders/"+name+".vert").c_str(), ("shaders/"+name+".frag").c_str());
+    //Shader shader(("shaders/"+name+".vert").c_str(), ("shaders/"+name+".frag").c_str());
+    Shader fill("shaders/fill.vert", "shaders/fill.frag");
+    Shader edges("shaders/edge.vert", "shaders/edge.frag");
 
     // Setup model
-    Model fish("models/fish.obj", MODE);
+    Model modelFill("models/fish.obj", 0);
+    Model modelEdges("models/fish.obj", 1);
     
     // Enable shaders
     glEnable(GL_DEPTH_TEST);
-    shaders.use();
-    
-    // Set up static matrices
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // Set up uniforms
     glm::mat4 model;
-
     glm::mat4 view = glm::lookAt(cameraPos, cameraPos+cameraFront, cameraUp);
-    shaders.setMat4((char*)"view", view);
-
     glm::mat4 projection = glm::perspective(1.2f, (float)screenWidth/(float)screenHeight, 0.1f, 100.0f);
-    shaders.setMat4((char*)"projection", projection);
     
+    edges.use();
+    edges.setMat4((char*)"view", view);
+    edges.setVec3((char*)"eye", cameraPos);
+    edges.setVec3((char*)"light", glm::vec3(0.0, 5.0, 0.0));
+    edges.setMat4((char*)"projection", projection);
+    
+    fill.use();
+    fill.setMat4((char*)"view", view);
+    fill.setMat4((char*)"projection", projection);
+
     // Background colour
-    glClearColor(0.7f, 0.7f, 0.7f, 1.0f);
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 
     //----- Render Loop -----//
@@ -162,8 +162,13 @@ int main()
 
         if (processInput(window)) {
             view = glm::lookAt(cameraPos, cameraPos+cameraFront, cameraUp);
-            shaders.setMat4((char*)"view", view);
+            edges.use();
+            edges.setMat4((char*)"view", view);
+            edges.setVec3((char*)"eye", cameraPos);
+            fill.use();
+            edges.setMat4((char*)"view", view);
             //cout << to_string(projection * view * model * glm::vec4(1.4, 2.4, 0.0, 1.0)) << "\n";
+            //cout << to_string(cameraPos) << "\t" << to_string(cameraFront) << "\n";
         }
 
         //changes that depend on time
@@ -171,15 +176,20 @@ int main()
         deltaTime = timeValue - lastFrameTime;
         lastFrameTime = timeValue;
 
-        float rotationValue = 0;(sin(timeValue*2 + cos(timeValue*2)) - 1) * 0.4;
+        float rotationValue = 0;//(sin(timeValue*2 + cos(timeValue*2)) - 1) * 0.4;
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0.0, -0.4, 0.0));
         model = glm::rotate(model, rotationValue, glm::vec3(0.0, 0.0, 1.0));
         model = glm::translate(model, glm::vec3(0.0, 0.5, 0.0));
-        shaders.setMat4((char*)"model", model);
+        edges.setMat4((char*)"model", model);
 
+        //shaders.setVec3((char*)"light", glm::vec3(5*sin(timeValue), 5.0, 5*cos(timeValue)));
+        
         //draw the triangles
-        fish.draw(shaders);
+        fill.use();
+        modelFill.draw(edges);
+        edges.use();
+        modelEdges.draw(edges);
         
         glfwSwapBuffers(window);
         glfwPollEvents();

@@ -8,14 +8,12 @@ out vec3 colour;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
-uniform vec3 light;
 
 void main()
 {
-    gl_Position = projection * view * model * vec4(aPos, 1.0);
+    vec4 pos = (projection * view * model * vec4(aPos, 1.0));
+    gl_Position = vec4(pos.xy, 0.999*pos.w, pos.w);
 
     vec4 globalNormal = model * vec4(vNormal, 0.0);
-    float shade = 0.5;
-    shade = 0.3 + dot(globalNormal, vec4(normalize(light - aPos), 0.0)) / 5;
-    colour = vec3(shade, shade, shade);
+    colour = vec3(0.8, 0.8, 0.9);
 }

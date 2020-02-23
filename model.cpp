@@ -38,7 +38,7 @@ Model::Model(string path, int mode){
 
 void Model::draw(Shader shader){
     for(Mesh mesh : meshes){
-        mesh.draw(shader);
+        mesh.draw();
     }
 }
 
@@ -136,7 +136,7 @@ Mesh Model::processEdgeMesh(aiMesh *mesh, const aiScene *scene){
                 edgeMap.erase(edge);
             }
             else
-                edgeMap[edge] = faceNormal;
+                edgeMap[edge] = myNormal;//faceNormal;
         }
         
     }

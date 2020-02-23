@@ -24,7 +24,7 @@ struct EdgeVertex{
 
 class Mesh{
     public:
-        void draw(Shader shader);
+        void draw();
     protected:
         unsigned int VAO, VBO, EBO;
         unsigned int length;
