@@ -25,18 +25,20 @@ void main()
     // find transformation matrix
     mat4 M = projection * view * model;
     vec4 pos = (M * vec4(v, 1.0));
-
+    
+    float SCALE  = 0.04;
+    float REDUCE = 0.00;
     // calculate witdh multiplier
-    vec3 lightVec = normalize(vec4(v, 1.0).xyz-light);
-    float vW = 0.05 * length(nv+lightVec) - 0.00;
+    vec3 lightVec = normalize((model*vec4(v, 1.0)).xyz-light);
+    float vW = SCALE * length(nv+lightVec) - REDUCE;
     // extra value needed for sharp objects
     vec3 edgeNormal = normalize(nA+nB);
-    float eW = 0.04 * length(edgeNormal+lightVec) + 0.03;
+    float eW = SCALE * length(edgeNormal+lightVec) - REDUCE;
     // value needed for tangent-based lighting
     vec3 tangent = normalize(cross(eye-v, v2-v));
     if(dot(tangent, nv) < 0)
         tangent = -tangent;
-    float tW = 0.05 * length(tangent+lightVec) - 0.00;
+    float tW = SCALE * length(tangent+lightVec) - REDUCE;
 
     // make sure variables don't go negative
     if(vW < 0)
@@ -66,7 +68,7 @@ void main()
             colour = vec4(0.0, 0.0, 0.0, 1.0); break;
         case 2:
             gl_Position = pos+vec4(vW*m, 0.0, 0.0);
-            colour = vec4(1.0, 0.0, 0.0, 1.0); break;
+            colour = vec4(0.0, 0.0, 0.0, 1.0); break;
         default:
             gl_Position = pos;
             colour = vec4(0.0, 0.0, 0.0, 1.0); break;
@@ -75,7 +77,7 @@ void main()
     vec4 gv = model * vec4(v, 1.0);
     vec4 gnA = model * vec4(nA, 0.0);
     vec4 gnB = model * vec4(nB, 0.0);
-    if(dot(gnA,vec4(eye, 1.0)-gv) < 0 == dot(gnB,vec4(eye, 1.0)-gv) < 0)
-        //colour = vec4(0.3, 0.3, 0.6, 0.05);
+    if(dot(gnA,vec4(eye, 1.0)-gv) < 0 == dot(gnB,vec4(eye, 1.0)-gv) < 0 && dot(normalize(nA), normalize(nB)) > -0.2)
+        //colour = vec4(1.0, 0.0, (dot(nA,nB)+2)/4, 1.0);
         gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
 }

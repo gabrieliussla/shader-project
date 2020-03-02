@@ -128,8 +128,10 @@ int main()
     Shader edges("shaders/edge.vert", "shaders/edge.frag");
 
     // Setup model
-    Model modelFill("models/fish.obj", 0);
-    Model modelEdges("models/fish.obj", 1);
+    Model potFill("models/pot.obj", 0);
+    Model potEdges("models/pot.obj", 1);
+    Model sphereFill("models/sphere.obj", 0);
+    Model sphereEdges("models/sphere.obj", 1);
     
     // Enable shaders
     glEnable(GL_DEPTH_TEST);
@@ -138,13 +140,14 @@ int main()
 
     // Set up uniforms
     glm::mat4 model;
+    glm::mat4 sphereModel = glm::translate(glm::mat4(1.0f), glm::vec3(-1.0f, 0.7f, -4.2f));
     glm::mat4 view = glm::lookAt(cameraPos, cameraPos+cameraFront, cameraUp);
     glm::mat4 projection = glm::perspective(1.2f, (float)screenWidth/(float)screenHeight, 0.1f, 100.0f);
     
     edges.use();
     edges.setMat4((char*)"view", view);
     edges.setVec3((char*)"eye", cameraPos);
-    edges.setVec3((char*)"light", glm::vec3(0.0, 5.0, 0.0));
+    edges.setVec3((char*)"light", glm::vec3(0.0, 8.0, 0.0));
     edges.setMat4((char*)"projection", projection);
     
     fill.use();
@@ -181,15 +184,21 @@ int main()
         model = glm::translate(model, glm::vec3(0.0, -0.4, 0.0));
         model = glm::rotate(model, rotationValue, glm::vec3(0.0, 0.0, 1.0));
         model = glm::translate(model, glm::vec3(0.0, 0.5, 0.0));
-        edges.setMat4((char*)"model", model);
 
         //shaders.setVec3((char*)"light", glm::vec3(5*sin(timeValue), 5.0, 5*cos(timeValue)));
         
         //draw the triangles
         fill.use();
-        modelFill.draw(edges);
+        fill.setMat4((char*)"model", model);
+        potFill.draw(fill);
+        fill.setMat4((char*)"model", sphereModel);
+        sphereFill.draw(fill);
+
         edges.use();
-        modelEdges.draw(edges);
+        edges.setMat4((char*)"model", model);
+        potEdges.draw(edges);
+        edges.setMat4((char*)"model", sphereModel);
+        sphereEdges.draw(edges);
         
         glfwSwapBuffers(window);
         glfwPollEvents();

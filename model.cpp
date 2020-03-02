@@ -98,7 +98,7 @@ Mesh Model::processEdgeMesh(aiMesh *mesh, const aiScene *scene){
         glm::vec3 c1 = to_vec3(mesh, mesh->mVertices[face.mIndices[0]]);
         glm::vec3 c2 = to_vec3(mesh, mesh->mVertices[face.mIndices[1]]);
         glm::vec3 c3 = to_vec3(mesh, mesh->mVertices[face.mIndices[2]]);
-        glm::vec3 myNormal = glm::cross(c1-c2, c1-c3);
+        glm::vec3 myNormal = glm::normalize(glm::cross(c1-c2, c1-c3));
 
         for(int j=0; j<face.mNumIndices; j++){
             // assign both vertices of edge
@@ -139,6 +139,24 @@ Mesh Model::processEdgeMesh(aiMesh *mesh, const aiScene *scene){
                 edgeMap[edge] = myNormal;//faceNormal;
         }
         
+    }
+    
+    // add all 'unprocessed edgs' to the drawing creating the other normal as the opposite
+    for(tuple<tuple<glm::vec3, glm::vec3>, glm::vec3> unprocessed : edgeMap){
+        EdgeVertex edgev;
+        edgev.nA = get<1>(unprocessed);
+        edgev.nB = -get<1>(unprocessed);
+        glm::vec3 v1 = get<0>(get<0>(unprocessed));
+        glm::vec3 v2 = get<1>(get<0>(unprocessed));
+        for(int kind=0; kind<3; kind++){
+            edgev.kind = kind;
+            edgev.v    = v1;
+            edgev.v2   = v2;
+            edgeVertices.push_back(edgev);
+            edgev.v    = v2;
+            edgev.v2   = v1;
+            edgeVertices.push_back(edgev);
+        }
     }
 
     EdgeVertex prev;
