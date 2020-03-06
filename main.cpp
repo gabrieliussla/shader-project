@@ -126,12 +126,15 @@ int main()
     //Shader shader(("shaders/"+name+".vert").c_str(), ("shaders/"+name+".frag").c_str());
     Shader fill("shaders/fill.vert", "shaders/fill.frag");
     Shader edges("shaders/edge.vert", "shaders/edge.frag");
+    Shader textures("shaders/texture.vert", "shaders/texture.frag");
 
     // Setup model
     Model potFill("models/pot.obj", 0);
     Model potEdges("models/pot.obj", 1);
+    Model potTexture("models/pot.obj", 2);
     Model sphereFill("models/sphere.obj", 0);
     Model sphereEdges("models/sphere.obj", 1);
+    Model sphereTexture("models/sphere.obj", 2);
     
     // Enable shaders
     glEnable(GL_DEPTH_TEST);
@@ -154,6 +157,11 @@ int main()
     fill.setMat4((char*)"view", view);
     fill.setMat4((char*)"projection", projection);
 
+    textures.use();
+    textures.setMat4((char*)"view", view);
+    textures.setMat4((char*)"projection", projection);
+
+
     // Background colour
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -169,7 +177,9 @@ int main()
             edges.setMat4((char*)"view", view);
             edges.setVec3((char*)"eye", cameraPos);
             fill.use();
-            edges.setMat4((char*)"view", view);
+            fill.setMat4((char*)"view", view);
+            textures.use();
+            textures.setMat4((char*)"view", view);
             //cout << to_string(projection * view * model * glm::vec4(1.4, 2.4, 0.0, 1.0)) << "\n";
             //cout << to_string(cameraPos) << "\t" << to_string(cameraFront) << "\n";
         }
@@ -199,6 +209,12 @@ int main()
         potEdges.draw(edges);
         edges.setMat4((char*)"model", sphereModel);
         sphereEdges.draw(edges);
+
+        textures.use();
+        textures.setMat4((char*)"model", model);
+        potTexture.draw(textures);
+        textures.setMat4((char*)"model", sphereModel);
+        sphereTexture.draw(textures);
         
         glfwSwapBuffers(window);
         glfwPollEvents();

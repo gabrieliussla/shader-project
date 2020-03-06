@@ -44,11 +44,6 @@ void main()
     if(vW < 0)
         vW = 0;
 
-
-//if(kind == 2){
-//    pos = (M*(vec4(v, 1.0)+0.1*vec4(tangent, 0.0)));
-//}
-
     // calculate 2D coordinates
     vec2 s  = screen(M, v);
     vec2 s2 = screen(M, v2);

@@ -19,7 +19,14 @@ struct EdgeVertex{
     glm::vec3 nv;   //vertex normal
     glm::vec3 nA;   //face A normal
     glm::vec3 nB;   //face B normal
-    short kind;       //what kind of vertex it is (outer:0, inner:1, cap:2)
+    short kind;     //what kind of vertex it is (outer:0, inner:1, cap:2)
+};
+
+struct KeyVertex{
+    glm::vec3 position;
+    glm::vec3 normal;
+    float lightness;
+    short kind;
 };
 
 class Mesh{
@@ -44,6 +51,14 @@ class EdgeMesh : public Mesh{
     public:
         vector<EdgeVertex> edgeVertices;
         EdgeMesh(vector<EdgeVertex> edgeVertices);
+    protected:
+        void setUpMesh();
+};
+
+class TextureMesh : public Mesh{
+    public:
+        vector<KeyVertex> keyVertices;
+        TextureMesh(vector<KeyVertex> keyVertices);
     protected:
         void setUpMesh();
 };

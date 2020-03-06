@@ -17,6 +17,7 @@ class Model{
         void processScene(const aiScene *scene, int mode);
         Mesh processSimpleMesh(aiMesh *mesh, const aiScene *scene);
         Mesh processEdgeMesh(aiMesh *mesh, const aiScene *scene);
+        Mesh processTextureMesh(aiMesh *mesh, const aiScene *scene);
 };
 
 #endif

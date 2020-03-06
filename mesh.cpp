@@ -21,6 +21,13 @@ EdgeMesh::EdgeMesh(vector<EdgeVertex> edgeVertices){
     setUpMesh();
 }
 
+TextureMesh::TextureMesh(vector<KeyVertex> keyVertices){
+    this->keyVertices = keyVertices;
+    this->length      = keyVertices.size()/4*6;
+    printf("size:%d\n", this->length);
+    setUpMesh();
+}
+
 void Mesh::draw(){
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, length, GL_UNSIGNED_INT, 0);
@@ -28,7 +35,7 @@ void Mesh::draw(){
 }
 
 void Mesh::setUpMesh(){
-    cout << "Mesh set-up unimplemented";
+    cout << "Mesh set-up unimplemented\n";
 }
 
 void SimpleMesh::setUpMesh(){
@@ -66,7 +73,6 @@ vector<EdgeVertex> addtovec(vector<EdgeVertex> vector, glm::vec3 v, glm::vec3 v2
 }
 
 void EdgeMesh::setUpMesh(){
-
     //construct index array
     vector<unsigned int> indices;
     indices.reserve(length);
@@ -74,32 +80,6 @@ void EdgeMesh::setUpMesh(){
         unsigned int edge[12] = {i, i+2, i+3, i, i+3, i+1, i, i+4, i+2, i+1, i+3, i+5};
         indices.insert(indices.end(), begin(edge), end(edge));
     }
-    
-
-    // TEST ////////////////////
-    //vector<EdgeVertex> vec(edgeVertices.begin()+12000, edgeVertices.begin()+17000);
-    //edgeVertices = vec;
-    //vector<unsigned int> newVec(indices.begin(), indices.begin()+6000);
-    //indices = newVec;
-    //length= 3000;
-    
-    //edgeVertices.clear();
-    //edgeVertices=addtovec(edgeVertices,glm::vec3(0.0, 0.0, 0.0),glm::vec3(1.0, 1.0, 0.0),glm::vec3(-0.8, 0.2, 0.0),glm::vec3(-0.5, -0.7, 0.3),glm::vec3(-0.5, -0.7, -0.4),0);
-    //edgeVertices=addtovec(edgeVertices,glm::vec3(1.0, 1.0, 0.0),glm::vec3(0.0, 0.0, 0.0),glm::vec3( 0.2, 0.8, 0.0),glm::vec3(-0.5, -0.7, 0.3),glm::vec3(-0.5, -0.7, -0.4),0);
-    //edgeVertices=addtovec(edgeVertices,glm::vec3(0.0, 0.0, 0.0),glm::vec3(1.0, 1.0, 0.0),glm::vec3(-0.8, 0.2, 0.0),glm::vec3(-0.5, -0.7, 0.3),glm::vec3(-0.5, -0.7, -0.4),1);
-    //edgeVertices=addtovec(edgeVertices,glm::vec3(1.0, 1.0, 0.0),glm::vec3(0.0, 0.0, 0.0),glm::vec3( 0.2, 0.8, 0.0),glm::vec3(-0.5, -0.7, 0.3),glm::vec3(-0.5, -0.7, -0.4),1);
-    //edgeVertices=addtovec(edgeVertices,glm::vec3(0.0, 0.0, 0.0),glm::vec3(1.0, 1.0, 0.0),glm::vec3(-0.8, 0.2, 0.0),glm::vec3(-0.5, -0.7, 0.3),glm::vec3(-0.5, -0.7, -0.4),2);
-    //edgeVertices=addtovec(edgeVertices,glm::vec3(1.0, 1.0, 0.0),glm::vec3(0.0, 0.0, 0.0),glm::vec3( 0.2, 0.8, 0.0),glm::vec3(-0.5, -0.7, 0.3),glm::vec3(-0.5, -0.7, -0.4),2);
-
-    //length = 12;
-
-    //for(EdgeVertex v : edgeVertices){
-    //    cout << to_string(v.v) << "\t" << to_string(v.nv) << "\t" << to_string(v.nA) << "\t" << to_string(v.nB) << "\t" << v.kind << "\n";
-    //}
-    //for(unsigned int i : indices){
-    //    cout << i;
-    //}
-    //cout << "\n";
 
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -130,6 +110,42 @@ void EdgeMesh::setUpMesh(){
 
     glEnableVertexAttribArray(5); //kind
     glVertexAttribIPointer(5, 1, GL_SHORT, sizeof(EdgeVertex), (void*)offsetof(EdgeVertex, kind));
+
+    glBindVertexArray(0); //unbind VAO
+}
+
+void TextureMesh::setUpMesh(){
+    //construct index array
+    vector<unsigned int> indices;
+    indices.reserve(length);
+    for(unsigned int i=0; i<keyVertices.size(); i+=4){
+        unsigned int edge[6] = {i, i+1, i+3, i, i+3, i+2};
+        indices.insert(indices.end(), begin(edge), end(edge));
+    }
+
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
+    glBindVertexArray(VAO); //bind VAO
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO); //set up VBO
+    glBufferData(GL_ARRAY_BUFFER, keyVertices.size()*sizeof(KeyVertex), &keyVertices[0], GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO); //set up EBO
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size()*sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0); //position
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(KeyVertex), (void*)offsetof(KeyVertex, position));
+
+    glEnableVertexAttribArray(1); //normal
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(KeyVertex), (void*)offsetof(KeyVertex, normal));
+
+    glEnableVertexAttribArray(2); //lightness
+    glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, sizeof(KeyVertex), (void*)offsetof(KeyVertex, lightness));
+
+    glEnableVertexAttribArray(3); //kind
+    glVertexAttribIPointer(3, 1, GL_SHORT, sizeof(KeyVertex), (void*)offsetof(KeyVertex, kind));
 
     glBindVertexArray(0); //unbind VAO
 }

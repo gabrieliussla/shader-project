@@ -55,6 +55,7 @@ void Model::processScene(const aiScene *scene, int mode){
             switch(mode){
                 case  0: meshes.push_back(processSimpleMesh(mesh, scene));   break;
                 case  1: meshes.push_back(processEdgeMesh(mesh, scene));     break;
+                case  2: meshes.push_back(processTextureMesh(mesh, scene));  break;
             } 
         }
         for(int i=0; i<node->mNumChildren; i++){
@@ -163,6 +164,55 @@ Mesh Model::processEdgeMesh(aiMesh *mesh, const aiScene *scene){
     for(EdgeVertex& edgev : edgeVertices)
         edgev.nv = glm::normalize(vertexMap[edgev.v]);
 
-    cout << "total vertices: " << mesh->mNumVertices << "\nunique vertices: " << vertexMap.size() << "\nedge vertices: " << edgeVertices.size() << "\nunprocessed edges: " << edgeMap.size() << "\n";
+    //cout << "total vertices: " << mesh->mNumVertices << "\nunique vertices: " << vertexMap.size() << "\nedge vertices: " << edgeVertices.size() << "\nunprocessed edges: " << edgeMap.size() << "\n";
     return EdgeMesh(edgeVertices);
+}
+
+Mesh Model::processTextureMesh(aiMesh *mesh, const aiScene *scene){
+    
+    int DENSITY   = 7;
+
+    vector<KeyVertex> keyVertices;
+    glm::vec3 c1, c2, c3, myNormal;
+    float area;
+    double pointCount;
+    int count;
+    //srand(time(0));
+    for(int i=0; i<mesh->mNumFaces; i++){
+        // calculate (a factor of) the area of the triangle
+        aiFace face = mesh->mFaces[i];
+        c1 = to_vec3(mesh, mesh->mVertices[face.mIndices[0]]);
+        c2 = to_vec3(mesh, mesh->mVertices[face.mIndices[1]]);
+        c3 = to_vec3(mesh, mesh->mVertices[face.mIndices[2]]);
+        myNormal = glm::normalize(glm::cross(c1-c2, c1-c3));
+        area = glm::length(glm::cross(c2-c1, c3-c1));
+
+        // calculate how many points should be generated on this triangle
+        count = glm::floor(area*DENSITY);
+        if(rand() % 1000 < (int)(fmod(area*DENSITY, 1)*1000))
+            count++;
+
+        // generate the points
+        float rand1, rand2;
+        KeyVertex keyv;
+        for(int j=0; j<count; j++){
+            rand1 = (float)(rand()%100)/100;
+            rand2 = (float)(rand()%100)/100;
+            if(rand1+rand2 > 1){
+                rand1 = 1-rand1;
+                rand2 = 1-rand2;
+            }
+            keyv.position = c1 + rand1*(c2-c1) + rand2*(c3-c1);
+            keyv.normal = myNormal;
+            keyv.lightness = (float)(rand()%100)/100;
+            for(int kind=0; kind<4; kind++){
+                keyv.kind = kind;
+                //cout << glm::to_string(keyv.position) << "\n" << glm::to_string(keyv.normal) << "\n" << keyv.lightness << "\n" << keyv.kind << "\n\n";
+                keyVertices.push_back(keyv);
+            }
+            pointCount++;
+        }
+    }
+    cout << "pointCount: " << pointCount << "\n";
+    return TextureMesh(keyVertices);
 }
