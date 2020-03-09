@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <stb/stb_image.h>
 
 #include <glm/ext.hpp>
 #include <glm/gtx/string_cast.hpp> // for testing
@@ -135,7 +136,24 @@ int main()
     Model sphereFill("models/sphere.obj", 0);
     Model sphereEdges("models/sphere.obj", 1);
     Model sphereTexture("models/sphere.obj", 2);
-    
+
+    // Get textures
+    int width, height, nrChannels;
+    unsigned char *data = stbi_load("textures/target.png", &width, &height, &nrChannels, 0);
+    if(!data){
+        std::cout << "Loading texture failed!";
+        return -1;
+    }
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    stbi_image_free(data);
+    //activate texture, might need to change if using multiple
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
     // Enable shaders
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
@@ -196,7 +214,7 @@ int main()
         model = glm::translate(model, glm::vec3(0.0, 0.5, 0.0));
 
         //shaders.setVec3((char*)"light", glm::vec3(5*sin(timeValue), 5.0, 5*cos(timeValue)));
-        
+
         //draw the triangles
         fill.use();
         fill.setMat4((char*)"model", model);

@@ -1,5 +1,5 @@
 TARGET=run
-OBJECTFILES=main.o shader.o mesh.o model.o glad.o
+OBJECTFILES=main.o shader.o mesh.o model.o glad.o includes/stb/stb_image.o
 
 CC=gcc
 CXX=g++
