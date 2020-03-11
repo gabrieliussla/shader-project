@@ -12,12 +12,13 @@ class Model{
         Model(string path, int mode);
         void draw(Shader shader);
     private:
+        int mode;
         vector<Mesh> meshes;
         string dir;
         void processScene(const aiScene *scene, int mode);
-        Mesh processSimpleMesh(aiMesh *mesh, const aiScene *scene);
-        Mesh processEdgeMesh(aiMesh *mesh, const aiScene *scene);
-        Mesh processTextureMesh(aiMesh *mesh, const aiScene *scene);
+        void processSimpleMesh(aiMesh *mesh, const aiScene *scene);
+        void processEdgeMesh(aiMesh *mesh, const aiScene *scene);
+        void processTextureMesh(aiMesh *mesh, const aiScene *scene);
 };
 
 #endif

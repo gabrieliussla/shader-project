@@ -1,5 +1,8 @@
 #version 330 core
 
+#define SCALE 0.08
+#define REDUCE 0.00
+
 layout (location = 0) in vec3 v;
 layout (location = 1) in vec3 v2;
 layout (location = 2) in vec3 nv;
@@ -26,8 +29,6 @@ void main()
     mat4 M = projection * view * model;
     vec4 pos = (M * vec4(v, 1.0));
     
-    float SCALE  = 0.04;
-    float REDUCE = 0.00;
     // calculate witdh multiplier
     vec3 lightVec = normalize((model*vec4(v, 1.0)).xyz-light);
     float vW = SCALE * length(nv+lightVec) - REDUCE;
@@ -68,6 +69,7 @@ void main()
             gl_Position = pos;
             colour = vec4(0.0, 0.0, 0.0, 1.0); break;
     }
+    colour = vec4(0.3, 0.3, 0.3, 1.0);
     // figure out if it needs to be drawn
     vec4 gv = model * vec4(v, 1.0);
     vec4 gnA = model * vec4(nA, 0.0);

@@ -9,8 +9,13 @@
 #include <glm/gtx/string_cast.hpp> //for testing
 #include <iostream>
 #include <string>
+#include <math.h>
+#include <algorithm>
 #include <unordered_map>
 #include <tuple>
+
+#define DENSITY 7
+#define COLOUR_POW 0
 
 struct edge_hash{
     size_t operator()(tuple<glm::vec3, glm::vec3> x) const {
@@ -33,13 +38,18 @@ Model::Model(string path, int mode){
     }
     dir = path.substr(0, path.find_last_of('/'));
 
+    this->mode = mode;
     processScene(scene, mode);
 }
 
 void Model::draw(Shader shader){
+    if(mode == 2)
+        glDisable(GL_DEPTH_TEST);
     for(Mesh mesh : meshes){
         mesh.draw();
     }
+    if(mode == 2)
+        glEnable(GL_DEPTH_TEST);
 }
 
 void Model::processScene(const aiScene *scene, int mode){
@@ -53,9 +63,9 @@ void Model::processScene(const aiScene *scene, int mode){
         for(int i=0; i<node->mNumMeshes; i++){
             aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
             switch(mode){
-                case  0: meshes.push_back(processSimpleMesh(mesh, scene));   break;
-                case  1: meshes.push_back(processEdgeMesh(mesh, scene));     break;
-                case  2: meshes.push_back(processTextureMesh(mesh, scene));  break;
+                case  0: processSimpleMesh(mesh, scene);   break;
+                case  1: processEdgeMesh(mesh, scene);     break;
+                case  2: processTextureMesh(mesh, scene);  break;
             } 
         }
         for(int i=0; i<node->mNumChildren; i++){
@@ -64,7 +74,7 @@ void Model::processScene(const aiScene *scene, int mode){
     }
 }
 
-Mesh Model::processSimpleMesh(aiMesh *mesh, const aiScene *scene){
+void Model::processSimpleMesh(aiMesh *mesh, const aiScene *scene){
     vector<Vertex> vertices;
     vector<unsigned int> indices;
     for(int i=0; i<mesh->mNumVertices; i++){
@@ -83,10 +93,10 @@ Mesh Model::processSimpleMesh(aiMesh *mesh, const aiScene *scene){
         }
     }
 
-    return SimpleMesh(vertices, indices);
+    meshes.push_back(SimpleMesh(vertices, indices));
 }
 
-Mesh Model::processEdgeMesh(aiMesh *mesh, const aiScene *scene){
+void Model::processEdgeMesh(aiMesh *mesh, const aiScene *scene){
     vector<EdgeVertex> edgeVertices;
     unordered_map<tuple<glm::vec3, glm::vec3>, glm::vec3, edge_hash> edgeMap;   // to store face normal
     unordered_map<glm::vec3, glm::vec3> vertexMap;                              // to store vertex normal
@@ -165,19 +175,16 @@ Mesh Model::processEdgeMesh(aiMesh *mesh, const aiScene *scene){
         edgev.nv = glm::normalize(vertexMap[edgev.v]);
 
     //cout << "total vertices: " << mesh->mNumVertices << "\nunique vertices: " << vertexMap.size() << "\nedge vertices: " << edgeVertices.size() << "\nunprocessed edges: " << edgeMap.size() << "\n";
-    return EdgeMesh(edgeVertices);
+    meshes.push_back(EdgeMesh(edgeVertices));
 }
 
-Mesh Model::processTextureMesh(aiMesh *mesh, const aiScene *scene){
-    
-    int DENSITY   = 7;
-
+void Model::processTextureMesh(aiMesh *mesh, const aiScene *scene){
     vector<KeyVertex> keyVertices;
     glm::vec3 c1, c2, c3, myNormal;
     float area;
+    float lightness;
     double pointCount;
     int count;
-    //srand(time(0));
     for(int i=0; i<mesh->mNumFaces; i++){
         // calculate (a factor of) the area of the triangle
         aiFace face = mesh->mFaces[i];
@@ -204,15 +211,21 @@ Mesh Model::processTextureMesh(aiMesh *mesh, const aiScene *scene){
             }
             keyv.position = c1 + rand1*(c2-c1) + rand2*(c3-c1);
             keyv.normal = myNormal;
-            keyv.lightness = (float)(rand()%100)/100;
+            lightness = (float)(rand()%100)/100;
+            lightness = pow(lightness, COLOUR_POW)/2;
+            if(lightness < pow(0.5, COLOUR_POW))
+                lightness = 1-lightness;
+            keyv.lightness = lightness;
             for(int kind=0; kind<4; kind++){
                 keyv.kind = kind;
                 //cout << glm::to_string(keyv.position) << "\n" << glm::to_string(keyv.normal) << "\n" << keyv.lightness << "\n" << keyv.kind << "\n\n";
                 keyVertices.push_back(keyv);
             }
+            meshes.push_back(TextureMesh(keyVertices));
+            keyVertices.clear();
             pointCount++;
         }
     }
-    cout << "pointCount: " << pointCount << "\n";
-    return TextureMesh(keyVertices);
+    cout << meshes.size() << " meshes!\n";
+    //std::random_shuffle(meshes.begin(), meshes.end(), [](int i)->int{return rand()%i;});
 }

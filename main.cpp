@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 #include <filesystem>
 
 #include <glad/glad.h>
@@ -14,6 +15,7 @@
 #include "shader.h"
 #include "model.h"
 
+#define BRUSH "hatch"
 
 //----- Globals -----//
 
@@ -26,7 +28,7 @@ float lastFrameTime;
 glm::vec3 cameraPos = glm::vec3(-1.4, 2.9, -2.2);//glm::vec3(4.2, 3.2, 6.2);
 glm::vec3 cameraFront = glm::vec3(0.5, 0.0, 0.8);//glm::vec3(-0.5,0,-0.8);
 glm::vec3 cameraUp = glm::vec3(0.0, 1.0, 0.0);
-float cameraYaw = -0.56;
+float cameraYaw = 2.56;
 
 
 //----- Callback functions -----//
@@ -139,7 +141,7 @@ int main()
 
     // Get textures
     int width, height, nrChannels;
-    unsigned char *data = stbi_load("textures/target.png", &width, &height, &nrChannels, 0);
+    unsigned char *data = stbi_load(("textures/"+std::string(BRUSH)+".png").c_str(), &width, &height, &nrChannels, 0);
     if(!data){
         std::cout << "Loading texture failed!";
         return -1;
@@ -154,7 +156,8 @@ int main()
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
 
-    // Enable shaders
+    // Buffer settings
+    glEnable(GL_STENCIL_TEST);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -177,6 +180,7 @@ int main()
 
     textures.use();
     textures.setMat4((char*)"view", view);
+    textures.setVec3((char*)"eye", cameraPos);
     textures.setMat4((char*)"projection", projection);
 
 
@@ -187,7 +191,7 @@ int main()
     //----- Render Loop -----//
 
     while (!glfwWindowShouldClose(window)) {
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         if (processInput(window)) {
             view = glm::lookAt(cameraPos, cameraPos+cameraFront, cameraUp);
@@ -198,6 +202,7 @@ int main()
             fill.setMat4((char*)"view", view);
             textures.use();
             textures.setMat4((char*)"view", view);
+            textures.setVec3((char*)"eye", cameraPos);
             //cout << to_string(projection * view * model * glm::vec4(1.4, 2.4, 0.0, 1.0)) << "\n";
             //cout << to_string(cameraPos) << "\t" << to_string(cameraFront) << "\n";
         }
@@ -215,22 +220,34 @@ int main()
 
         //shaders.setVec3((char*)"light", glm::vec3(5*sin(timeValue), 5.0, 5*cos(timeValue)));
 
-        //draw the triangles
+        //draw the fill
+        glStencilMask(0xFF);
+        glStencilFunc(GL_ALWAYS, 1, 0xFF);
+        glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
         fill.use();
         fill.setMat4((char*)"model", model);
         potFill.draw(fill);
+        
+        glStencilFunc(GL_ALWAYS, 2, 0xFF);
         fill.setMat4((char*)"model", sphereModel);
         sphereFill.draw(fill);
-
+        
+        //draw the edges
+        glStencilOp(GL_KEEP, GL_KEEP, GL_ZERO);
         edges.use();
         edges.setMat4((char*)"model", model);
         potEdges.draw(edges);
         edges.setMat4((char*)"model", sphereModel);
         sphereEdges.draw(edges);
 
+        //draw the texture
+        glStencilFunc(GL_EQUAL, 1, 0xFF);
+        glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
         textures.use();
         textures.setMat4((char*)"model", model);
         potTexture.draw(textures);
+
+        glStencilFunc(GL_EQUAL, 2, 0xFF);
         textures.setMat4((char*)"model", sphereModel);
         sphereTexture.draw(textures);
         

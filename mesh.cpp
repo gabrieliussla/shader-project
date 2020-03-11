@@ -23,8 +23,7 @@ EdgeMesh::EdgeMesh(vector<EdgeVertex> edgeVertices){
 
 TextureMesh::TextureMesh(vector<KeyVertex> keyVertices){
     this->keyVertices = keyVertices;
-    this->length      = keyVertices.size()/4*6;
-    printf("size:%d\n", this->length);
+    this->length      = 6;
     setUpMesh();
 }
 
@@ -116,12 +115,7 @@ void EdgeMesh::setUpMesh(){
 
 void TextureMesh::setUpMesh(){
     //construct index array
-    vector<unsigned int> indices;
-    indices.reserve(length);
-    for(unsigned int i=0; i<keyVertices.size(); i+=4){
-        unsigned int edge[6] = {i, i+1, i+3, i, i+3, i+2};
-        indices.insert(indices.end(), begin(edge), end(edge));
-    }
+    vector<unsigned int> indices = {0, 1, 3, 0, 3, 2};
 
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
