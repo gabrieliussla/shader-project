@@ -14,8 +14,8 @@
 #include <unordered_map>
 #include <tuple>
 
-#define DENSITY 7
-#define COLOUR_POW 0
+#define DENSITY 9
+#define COLOUR_POW 2
 
 struct edge_hash{
     size_t operator()(tuple<glm::vec3, glm::vec3> x) const {
@@ -163,10 +163,10 @@ void Model::processEdgeMesh(aiMesh *mesh, const aiScene *scene){
             edgev.kind = kind;
             edgev.v    = v1;
             edgev.v2   = v2;
-            edgeVertices.push_back(edgev);
+            //edgeVertices.push_back(edgev);
             edgev.v    = v2;
             edgev.v2   = v1;
-            edgeVertices.push_back(edgev);
+            //edgeVertices.push_back(edgev);
         }
     }
 

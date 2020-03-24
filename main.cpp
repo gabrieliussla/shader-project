@@ -15,12 +15,13 @@
 #include "shader.h"
 #include "model.h"
 
-#define BRUSH "hatch"
+#define BRUSH "splat"
 
 //----- Globals -----//
 
 int screenWidth = 600;
 int screenHeight = 600;
+int screenChange = 0;
 
 float deltaTime;
 float lastFrameTime;
@@ -38,6 +39,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
     screenWidth = width;
     screenHeight = height;
+    screenChange = 1;
 }
 
 // On input
@@ -100,6 +102,7 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_SAMPLES, 4);
 
     // Create a Windows window
     GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "GLTest", NULL, NULL);
@@ -131,6 +134,7 @@ int main()
     Shader edges("shaders/edge.vert", "shaders/edge.frag");
     Shader textures("shaders/texture.vert", "shaders/texture.frag");
 
+    ///// CAN MAKE THIS NICER
     // Setup model
     Model potFill("models/pot.obj", 0);
     Model potEdges("models/pot.obj", 1);
@@ -157,11 +161,13 @@ int main()
     glBindTexture(GL_TEXTURE_2D, texture);
 
     // Buffer settings
+    glEnable(GL_MULTISAMPLE);
     glEnable(GL_STENCIL_TEST);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    ///// MAKE THIS BETTER
     // Set up uniforms
     glm::mat4 model;
     glm::mat4 sphereModel = glm::translate(glm::mat4(1.0f), glm::vec3(-1.0f, 0.7f, -4.2f));
@@ -176,6 +182,7 @@ int main()
     
     fill.use();
     fill.setMat4((char*)"view", view);
+    fill.setVec3((char*)"light", glm::vec3(0.0, 8.0, 0.0));
     fill.setMat4((char*)"projection", projection);
 
     textures.use();
@@ -192,7 +199,8 @@ int main()
 
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
+    
+        ///// MAKE THESE UPDATES BETTER (MINIMIZE SWITCHES)
         if (processInput(window)) {
             view = glm::lookAt(cameraPos, cameraPos+cameraFront, cameraUp);
             edges.use();
@@ -205,6 +213,16 @@ int main()
             textures.setVec3((char*)"eye", cameraPos);
             //cout << to_string(projection * view * model * glm::vec4(1.4, 2.4, 0.0, 1.0)) << "\n";
             //cout << to_string(cameraPos) << "\t" << to_string(cameraFront) << "\n";
+        }
+        if(screenChange){
+            projection = glm::perspective(1.2f, (float)screenWidth/(float)screenHeight, 0.1f, 100.0f);
+            fill.use();
+            fill.setMat4((char*)"projection", projection);
+            edges.use();
+            edges.setMat4((char*)"projection", projection);
+            textures.use();
+            textures.setMat4((char*)"projection", projection);
+            screenChange = 0;
         }
 
         //changes that depend on time
@@ -220,6 +238,8 @@ int main()
 
         //shaders.setVec3((char*)"light", glm::vec3(5*sin(timeValue), 5.0, 5*cos(timeValue)));
 
+
+        ///// MAKE THIS BETTER FOR MULTIPLE OBJECTS (& SHADERS)
         //draw the fill
         glStencilMask(0xFF);
         glStencilFunc(GL_ALWAYS, 1, 0xFF);
@@ -245,11 +265,11 @@ int main()
         glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
         textures.use();
         textures.setMat4((char*)"model", model);
-        potTexture.draw(textures);
+        //potTexture.draw(textures);
 
         glStencilFunc(GL_EQUAL, 2, 0xFF);
         textures.setMat4((char*)"model", sphereModel);
-        sphereTexture.draw(textures);
+        //sphereTexture.draw(textures);
         
         glfwSwapBuffers(window);
         glfwPollEvents();

@@ -1,7 +1,7 @@
 #version 330 core
 
 #define TEX_SIZE 0.7
-#define STRENGTH 1.0
+#define STRENGTH 0.4
 #define FAR_VAL 4.0
 
 layout (location = 0) in vec3 position;

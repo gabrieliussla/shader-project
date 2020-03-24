@@ -1,6 +1,6 @@
 #version 330 core
 
-#define SCALE 0.08
+#define SCALE 0.06
 #define REDUCE 0.00
 
 layout (location = 0) in vec3 v;
@@ -25,53 +25,63 @@ vec2 screen(mat4 M, vec3 vector){
 
 void main()
 {
-    // find transformation matrix
     mat4 M = projection * view * model;
     vec4 pos = (M * vec4(v, 1.0));
-    
+
+
     // calculate witdh multiplier
-    vec3 lightVec = normalize((model*vec4(v, 1.0)).xyz-light);
-    float vW = SCALE * length(nv+lightVec) - REDUCE;
-    // extra value needed for sharp objects
-    vec3 edgeNormal = normalize(nA+nB);
+    vec3 vertex        = (model*vec4(v,  1.0)).xyz;
+    vec3 vertex2       = (model*vec4(v2, 1.0)).xyz;
+    vec3 lightVec      = normalize(vertex-light);
+    vec3 edgeNormal    = normalize(nA+nB);
+    vec3 edgeTangent   = normalize(cross(vertex-eye, vertex-vertex2));
+     if(dot(edgeTangent, nv) < 0) edgeTangent = -edgeTangent;
+    vec3 vertexTangent = normalize(nv*(dot(vertex-eye, vertex-eye)) - (vertex-eye)*dot(vertex-eye, nv));
+
+    // edge-geometry lighting
     float eW = SCALE * length(edgeNormal+lightVec) - REDUCE;
-    // value needed for tangent-based lighting
-    vec3 tangent = normalize(cross(eye-v, v2-v));
-    if(dot(tangent, nv) < 0)
-        tangent = -tangent;
-    float tW = SCALE * length(tangent+lightVec) - REDUCE;
+    if(eW < 0) eW = 0;
+    // vertex-geometry lighting
+    float vW = SCALE * length(nv+lightVec) - REDUCE;
+    if(vW < 0) vW = 0;
+    // edge-tangent lighting
+    float teW = SCALE * length(edgeTangent+lightVec) - REDUCE;
+    if(teW < 0) teW = 0;
+    // vertex-tangent lighting
+    float tvW = SCALE * length(vertexTangent+lightVec) - REDUCE;
+    if(tvW < 0) tvW = 0;
 
-    // make sure variables don't go negative
-    if(vW < 0)
-        vW = 0;
 
-    // calculate 2D coordinates
+    // calculate 2D coordinates and vectors
     vec2 s  = screen(M, v);
     vec2 s2 = screen(M, v2);
     vec2 ns = screen(M, v+vW*nv);
 
     vec2 p  = normalize(vec2(s.y-s2.y, s2.x-s.x));
     vec2 m  = normalize(ns-s);
-    if(dot(p, m) < 0)
-        p = -p;
+    if(dot(p, m) < 0) p = -p;
 
+
+    // set position
     switch(kind){
         case 0:
             gl_Position = pos;
             colour = vec4(0.0, 0.0, 0.0, 1.0); break;
         case 1:
-            gl_Position = pos+vec4(vW*p, 0.0, 0.0);
+            gl_Position = pos+vec4(teW*p, 0.0, 0.0);
             colour = vec4(0.0, 0.0, 0.0, 1.0); break;
         case 2:
-            gl_Position = pos+vec4(vW*m, 0.0, 0.0);
-            colour = vec4(0.0, 0.0, 0.0, 1.0); break;
+            gl_Position = pos+vec4(teW*m, 0.0, 0.0);
+            colour = vec4(1.0, 0.0, 0.0, 1.0); break;
         default:
             gl_Position = pos;
             colour = vec4(0.0, 0.0, 0.0, 1.0); break;
     }
-    colour = vec4(0.3, 0.3, 0.3, 1.0);
+    //colour = vec4(0.3, 0.3, 0.3, 1.0);
+
+
     // figure out if it needs to be drawn
-    vec4 gv = model * vec4(v, 1.0);
+    vec4 gv  = model * vec4(v, 1.0);
     vec4 gnA = model * vec4(nA, 0.0);
     vec4 gnB = model * vec4(nB, 0.0);
     if(dot(gnA,vec4(eye, 1.0)-gv) < 0 == dot(gnB,vec4(eye, 1.0)-gv) < 0 && dot(normalize(nA), normalize(nB)) > -0.2)
