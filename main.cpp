@@ -169,16 +169,18 @@ int main()
 
     ///// MAKE THIS BETTER
     // Set up uniforms
+    float ratio = (float)screenWidth/(float)screenHeight;
     glm::mat4 model;
     glm::mat4 sphereModel = glm::translate(glm::mat4(1.0f), glm::vec3(-1.0f, 0.7f, -4.2f));
     glm::mat4 view = glm::lookAt(cameraPos, cameraPos+cameraFront, cameraUp);
-    glm::mat4 projection = glm::perspective(1.2f, (float)screenWidth/(float)screenHeight, 0.1f, 100.0f);
+    glm::mat4 projection = glm::perspective(1.2f, ratio, 0.1f, 100.0f);
     
     edges.use();
     edges.setMat4((char*)"view", view);
     edges.setVec3((char*)"eye", cameraPos);
     edges.setVec3((char*)"light", glm::vec3(0.0, 8.0, 0.0));
     edges.setMat4((char*)"projection", projection);
+    edges.setFloat((char*)"ratio", ratio);
     
     fill.use();
     fill.setMat4((char*)"view", view);
@@ -215,11 +217,13 @@ int main()
             //cout << to_string(cameraPos) << "\t" << to_string(cameraFront) << "\n";
         }
         if(screenChange){
-            projection = glm::perspective(1.2f, (float)screenWidth/(float)screenHeight, 0.1f, 100.0f);
+            ratio = (float)screenWidth/(float)screenHeight;
+            projection = glm::perspective(1.2f, ratio, 0.1f, 100.0f);
             fill.use();
             fill.setMat4((char*)"projection", projection);
             edges.use();
             edges.setMat4((char*)"projection", projection);
+            edges.setFloat((char*)"ratio", ratio);
             textures.use();
             textures.setMat4((char*)"projection", projection);
             screenChange = 0;

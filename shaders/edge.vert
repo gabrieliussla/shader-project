@@ -15,6 +15,7 @@ uniform mat4 view;
 uniform mat4 projection;
 uniform vec3 eye;
 uniform vec3 light;
+uniform float ratio;
 
 out vec4 colour;
 
@@ -50,28 +51,34 @@ void main()
     // vertex-tangent lighting
     float tvW = SCALE * length(vertexTangent+lightVec) - REDUCE;
     if(tvW < 0) tvW = 0;
-
+    vW = 0.05;
 
     // calculate 2D coordinates and vectors
     vec2 s  = screen(M, v);
     vec2 s2 = screen(M, v2);
     vec2 ns = screen(M, v+vW*nv);
+    
+    s.x  *= ratio;
+    s2.x *= ratio;
+    ns.x *= ratio;
 
-    vec2 p  = normalize(vec2(s.y-s2.y, s2.x-s.x));
+    vec2 p  = normalize(vec2(s.y-s2.y, (s2.x-s.x))); //error here, calculating wrong normal
     vec2 m  = normalize(ns-s);
     if(dot(p, m) < 0) p = -p;
 
+    p.x /= ratio;
+    m.x /= ratio;
 
     // set position
     switch(kind){
         case 0:
             gl_Position = pos;
-            colour = vec4(0.0, 0.0, 0.0, 1.0); break;
+            colour = vec4(0.0, 0.0, 1.0, 1.0); break;
         case 1:
-            gl_Position = pos+vec4(teW*p, 0.0, 0.0);
-            colour = vec4(0.0, 0.0, 0.0, 1.0); break;
+            gl_Position = pos+vec4(vW*p, 0.0, 0.0); // error, shifts too much in x
+            colour = vec4(0.0, 1.0, 0.0, 1.0); break;
         case 2:
-            gl_Position = pos+vec4(teW*m, 0.0, 0.0);
+            gl_Position = pos+vec4(3*vW*m, 0.0, 0.0); // error, bad angle
             colour = vec4(1.0, 0.0, 0.0, 1.0); break;
         default:
             gl_Position = pos;
