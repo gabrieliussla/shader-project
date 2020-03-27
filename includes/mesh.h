@@ -8,6 +8,11 @@
 
 using namespace std;
 
+struct ScreenVertex{
+    glm::vec2 position;
+    glm::vec2 texCoord;
+};
+
 struct Vertex{
     glm::vec3 position;
     glm::vec3 normal;
@@ -35,6 +40,17 @@ class Mesh{
     protected:
         unsigned int VAO, VBO, EBO;
         unsigned int length;
+        void setUpMesh();
+};
+
+//CHANGE TO PASS BY REFERENCE
+
+class ScreenMesh : public Mesh{
+    public:
+        vector<ScreenVertex> screenVertices;
+        vector<unsigned int> indices;
+        ScreenMesh(vector<ScreenVertex> vertices, vector<unsigned int> indices);
+    protected:
         void setUpMesh();
 };
 

@@ -51,7 +51,7 @@ void main()
     // vertex-tangent lighting
     float tvW = SCALE * length(vertexTangent+lightVec) - REDUCE;
     if(tvW < 0) tvW = 0;
-    vW = 0.05;
+    //vW = 0.02;
 
     // calculate 2D coordinates and vectors
     vec2 s  = screen(M, v);
@@ -73,16 +73,16 @@ void main()
     switch(kind){
         case 0:
             gl_Position = pos;
-            colour = vec4(0.0, 0.0, 1.0, 1.0); break;
+            colour = vec4(0.0, 0.0, 0.0, 1.0); break;
         case 1:
             gl_Position = pos+vec4(vW*p, 0.0, 0.0); // error, shifts too much in x
-            colour = vec4(0.0, 1.0, 0.0, 1.0); break;
+            colour = vec4(0.0, 0.0, 0.0, 1.0); break;
         case 2:
-            gl_Position = pos+vec4(3*vW*m, 0.0, 0.0); // error, bad angle
-            colour = vec4(1.0, 0.0, 0.0, 1.0); break;
+            gl_Position = pos+vec4(vW*m, 0.0, 0.0); // error, bad angle
+            colour = vec4(0.0, 0.0, 0.0, 1.0); break;
         default:
             gl_Position = pos;
-            colour = vec4(0.0, 0.0, 0.0, 1.0); break;
+            colour = vec4(0.0, 1.0, 1.0, 1.0); break;
     }
     //colour = vec4(0.3, 0.3, 0.3, 1.0);
 

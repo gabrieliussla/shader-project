@@ -14,7 +14,9 @@
 
 #include "shader.h"
 #include "model.h"
+#include "mesh.h"
 
+#define SAMPLES 4
 #define BRUSH "splat"
 
 //----- Globals -----//
@@ -102,12 +104,12 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_SAMPLES, 4);
+    glfwWindowHint(GLFW_SAMPLES, SAMPLES);
 
     // Create a Windows window
     GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "GLTest", NULL, NULL);
     if (window == NULL) {
-        std::cout << "Creating window failed!";
+        std::cout << "Creating window failed!\n";
         glfwTerminate();
         return -1;
     }
@@ -115,7 +117,7 @@ int main()
 
     // Load the GLAD library
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        std::cout << "Loading GLAD failed!";
+        std::cout << "Loading GLAD failed!\n";
         return -1;
     }
 
@@ -128,26 +130,81 @@ int main()
 
     //----- Set Up -----//
 
+    glActiveTexture(GL_TEXTURE0);
+    
     // Compile shaders
     //Shader shader(("shaders/"+name+".vert").c_str(), ("shaders/"+name+".frag").c_str());
     Shader fill("shaders/fill.vert", "shaders/fill.frag");
     Shader edges("shaders/edge.vert", "shaders/edge.frag");
     Shader textures("shaders/texture.vert", "shaders/texture.frag");
+    Shader image("shaders/image.vert", "shaders/image.frag");
 
     ///// CAN MAKE THIS NICER
-    // Setup model
+    // Setup models
     Model potFill("models/pot.obj", 0);
     Model potEdges("models/pot.obj", 1);
     Model potTexture("models/pot.obj", 2);
     Model sphereFill("models/sphere.obj", 0);
     Model sphereEdges("models/sphere.obj", 1);
     Model sphereTexture("models/sphere.obj", 2);
+    vector<ScreenVertex> vertices = {
+        {glm::vec2(-1.0, 1.0),glm::vec2(0.0,1.0)},
+        {glm::vec2( 1.0, 1.0),glm::vec2(1.0,1.0)},
+        {glm::vec2(-1.0,-1.0),glm::vec2(0.0,0.0)},
+        {glm::vec2( 1.0,-1.0),glm::vec2(1.0,0.0)}};
+    vector<unsigned int> indices  = {0, 1, 2, 1, 3, 2};
+    ScreenMesh screenMesh(vertices, indices);
 
-    // Get textures
+    // DELETE THE FRAMEBUFFER AT THE END
+    // Set up the multisampled framebuffer to render to
+    unsigned int screenTexMS;
+    glGenTextures(1, &screenTexMS);
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, screenTexMS);
+    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, SAMPLES, GL_RGB, screenWidth, screenHeight, GL_TRUE);
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+
+    unsigned int rboMS;
+    glGenRenderbuffers(1, &rboMS);
+    glBindRenderbuffer(GL_RENDERBUFFER, rboMS);
+    glRenderbufferStorageMultisample(GL_RENDERBUFFER, SAMPLES, GL_DEPTH24_STENCIL8, screenWidth, screenHeight);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+    unsigned int framebufferMS;
+    glGenFramebuffers(1, &framebufferMS);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebufferMS);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, screenTexMS, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rboMS);
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+        std::cout << "Setting up multisample frame buffer failed!\n";
+        return -1;
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // Set up the framebuffer to blit to
+    unsigned int screenTex;
+    glGenTextures(1, &screenTex);
+    glBindTexture(GL_TEXTURE_2D, screenTex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, screenWidth, screenHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    unsigned int framebuffer;
+    glGenFramebuffers(1, &framebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTex, 0);
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+        std::cout << "Setting up frame buffer failed!\n";
+        return -1;
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+    // Get brush textures
     int width, height, nrChannels;
     unsigned char *data = stbi_load(("textures/"+std::string(BRUSH)+".png").c_str(), &width, &height, &nrChannels, 0);
     if(!data){
-        std::cout << "Loading texture failed!";
+        std::cout << "Loading texture failed!\n";
         return -1;
     }
     unsigned int texture;
@@ -155,10 +212,9 @@ int main()
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     stbi_image_free(data);
     //activate texture, might need to change if using multiple
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture);
 
     // Buffer settings
     glEnable(GL_MULTISAMPLE);
@@ -166,6 +222,7 @@ int main()
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
     ///// MAKE THIS BETTER
     // Set up uniforms
@@ -193,14 +250,9 @@ int main()
     textures.setMat4((char*)"projection", projection);
 
 
-    // Background colour
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-
-
     //----- Render Loop -----//
 
     while (!glfwWindowShouldClose(window)) {
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     
         ///// MAKE THESE UPDATES BETTER (MINIMIZE SWITCHES)
         if (processInput(window)) {
@@ -226,6 +278,17 @@ int main()
             edges.setFloat((char*)"ratio", ratio);
             textures.use();
             textures.setMat4((char*)"projection", projection);
+
+            glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, screenTexMS);
+            glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, SAMPLES, GL_RGB, screenWidth, screenHeight, GL_TRUE);
+            glBindTexture(GL_TEXTURE_2D, screenTex);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, screenWidth, screenHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+            glBindTexture(GL_TEXTURE_2D, 0);
+
+            glBindRenderbuffer(GL_RENDERBUFFER, rboMS);
+            glRenderbufferStorageMultisample(GL_RENDERBUFFER, SAMPLES, GL_DEPTH24_STENCIL8, screenWidth, screenHeight);
+            glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
             screenChange = 0;
         }
 
@@ -242,6 +305,12 @@ int main()
 
         //shaders.setVec3((char*)"light", glm::vec3(5*sin(timeValue), 5.0, 5*cos(timeValue)));
 
+
+        glBindFramebuffer(GL_FRAMEBUFFER, framebufferMS);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_STENCIL_TEST);
 
         ///// MAKE THIS BETTER FOR MULTIPLE OBJECTS (& SHADERS)
         //draw the fill
@@ -269,12 +338,30 @@ int main()
         glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
         textures.use();
         textures.setMat4((char*)"model", model);
-        //potTexture.draw(textures);
+        potTexture.draw(textures);
 
         glStencilFunc(GL_EQUAL, 2, 0xFF);
         textures.setMat4((char*)"model", sphereModel);
-        //sphereTexture.draw(textures);
-        
+        sphereTexture.draw(textures);
+       
+
+        // Blit to the non-multisample buffer so it can be displayed
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, framebufferMS);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer);
+        glDrawBuffer(GL_BACK);
+        glBlitFramebuffer(0, 0, screenWidth, screenHeight, 0, 0, screenWidth, screenHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+
+        //draw quad to screen
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glBindTexture(GL_TEXTURE_2D, screenTex);
+
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_STENCIL_TEST);
+        image.use();
+        screenMesh.draw();
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

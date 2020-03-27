@@ -8,6 +8,13 @@
 #include <iostream>
 using namespace std;
 
+ScreenMesh::ScreenMesh(vector<ScreenVertex> vertices, vector<unsigned int> indices){
+    this->screenVertices = vertices;
+    this->indices        = indices;
+    this->length         = indices.size();
+    setUpMesh();
+}
+
 SimpleMesh::SimpleMesh(vector<Vertex> vertices, vector<unsigned int> indices){
     this->vertices = vertices;
     this->indices  = indices;
@@ -35,6 +42,28 @@ void Mesh::draw(){
 
 void Mesh::setUpMesh(){
     cout << "Mesh set-up unimplemented\n";
+}
+
+void ScreenMesh::setUpMesh(){
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+    
+    glBindVertexArray(VAO); //bind VAO
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO); //set up VBO
+    glBufferData(GL_ARRAY_BUFFER, screenVertices.size()*sizeof(ScreenVertex), &screenVertices[0], GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO); //set up EBO
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size()*sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+    
+    glEnableVertexAttribArray(0); //vertices
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(ScreenVertex), (void*)0);
+    
+    glEnableVertexAttribArray(1); //texture coordinates
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(ScreenVertex), (void*)offsetof(ScreenVertex, texCoord));
+
+    glBindVertexArray(0); //unbind VAO
 }
 
 void SimpleMesh::setUpMesh(){
