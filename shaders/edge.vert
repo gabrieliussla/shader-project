@@ -1,7 +1,7 @@
 #version 330 core
 
-#define SCALE 0.06
-#define REDUCE 0.00
+#define SCALE 0.05
+#define REDUCE 0.0
 
 layout (location = 0) in vec3 v;
 layout (location = 1) in vec3 v2;

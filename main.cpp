@@ -18,6 +18,7 @@
 
 #define SAMPLES 4
 #define BRUSH "splat"
+#define TEXTURE "paper_normals"
 
 //----- Globals -----//
 
@@ -87,9 +88,9 @@ bool processInput(GLFWwindow* window)
     return move || turn;
 }
 
-glm::vec2 screen(glm::mat4 projection, glm::vec3 vector){
+glm::vec3 screen(glm::mat4 projection, glm::vec3 vector){
     glm::vec4 proj_vector = projection * glm::vec4(vector, 1.0);
-    return glm::vec2(proj_vector.x/proj_vector.w, proj_vector.y/proj_vector.w);
+    return glm::vec3(glm::vec2(proj_vector) / glm::abs(proj_vector.w), proj_vector.z);
 }
 
 //----- Main Function -----//
@@ -129,15 +130,13 @@ int main()
 
 
     //----- Set Up -----//
-
-    glActiveTexture(GL_TEXTURE0);
     
     // Compile shaders
     //Shader shader(("shaders/"+name+".vert").c_str(), ("shaders/"+name+".frag").c_str());
     Shader fill("shaders/fill.vert", "shaders/fill.frag");
     Shader edges("shaders/edge.vert", "shaders/edge.frag");
     Shader textures("shaders/texture.vert", "shaders/texture.frag");
-    Shader image("shaders/image.vert", "shaders/image.frag");
+    Shader image("shaders/image.vert", "shaders/imagefx.frag");
 
     ///// CAN MAKE THIS NICER
     // Setup models
@@ -181,6 +180,7 @@ int main()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // Set up the framebuffer to blit to
+    glActiveTexture(GL_TEXTURE0);
     unsigned int screenTex;
     glGenTextures(1, &screenTex);
     glBindTexture(GL_TEXTURE_2D, screenTex);
@@ -199,22 +199,38 @@ int main()
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-
+    // POSSIBLY WRITE A FUNCTION FOR LOADING
     // Get brush textures
     int width, height, nrChannels;
     unsigned char *data = stbi_load(("textures/"+std::string(BRUSH)+".png").c_str(), &width, &height, &nrChannels, 0);
     if(!data){
-        std::cout << "Loading texture failed!\n";
+        std::cout << "Loading brush texture failed!\n";
         return -1;
     }
-    unsigned int texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
+    glActiveTexture(GL_TEXTURE0);
+    unsigned int brush;
+    glGenTextures(1, &brush);
+    glBindTexture(GL_TEXTURE_2D, brush);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, 0);
     stbi_image_free(data);
     //activate texture, might need to change if using multiple
+
+    // Load paper texture
+    data = stbi_load(("textures/"+std::string(TEXTURE)+".jpg").c_str(), &width, &height, &nrChannels, 0);
+    if(!data){
+        std::cout << "Loading texture failed!\n";
+        return -1;
+    }
+    glActiveTexture(GL_TEXTURE1);
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    stbi_image_free(data);
 
     // Buffer settings
     glEnable(GL_MULTISAMPLE);
@@ -249,6 +265,10 @@ int main()
     textures.setVec3((char*)"eye", cameraPos);
     textures.setMat4((char*)"projection", projection);
 
+    image.use();
+    image.setVec3((char*)"light", glm::vec3(0.0, 8.0, 0.0));
+    image.setInt((char*)"paper", 1);
+
 
     //----- Render Loop -----//
 
@@ -265,6 +285,14 @@ int main()
             textures.use();
             textures.setMat4((char*)"view", view);
             textures.setVec3((char*)"eye", cameraPos);
+            image.use();
+            glm::vec3 screenLight = screen(projection*view, glm::vec3(0.0, 8.0, 0.0));
+            screenLight.z = 5;
+            if(screenLight.x >  2) screenLight.x =  2;
+            if(screenLight.x < -2) screenLight.x = -2;
+            if(screenLight.y >  2) screenLight.y =  2;
+            if(screenLight.y < -2) screenLight.y = -2;
+            image.setVec3((char*)"flatlight", screenLight);
             //cout << to_string(projection * view * model * glm::vec4(1.4, 2.4, 0.0, 1.0)) << "\n";
             //cout << to_string(cameraPos) << "\t" << to_string(cameraFront) << "\n";
         }
@@ -278,6 +306,8 @@ int main()
             edges.setFloat((char*)"ratio", ratio);
             textures.use();
             textures.setMat4((char*)"projection", projection);
+            image.use();
+            image.setFloat((char*)"ratio", ratio);
 
             glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, screenTexMS);
             glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, SAMPLES, GL_RGB, screenWidth, screenHeight, GL_TRUE);
@@ -299,6 +329,7 @@ int main()
 
         float rotationValue = 0;//(sin(timeValue*2 + cos(timeValue*2)) - 1) * 0.4;
         model = glm::mat4(1.0f);
+        model = glm::scale(model, glm::vec3(1));
         model = glm::translate(model, glm::vec3(0.0, -0.4, 0.0));
         model = glm::rotate(model, rotationValue, glm::vec3(0.0, 0.0, 1.0));
         model = glm::translate(model, glm::vec3(0.0, 0.5, 0.0));
@@ -308,7 +339,8 @@ int main()
 
         glBindFramebuffer(GL_FRAMEBUFFER, framebufferMS);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        glBindTexture(GL_TEXTURE_2D, texture);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, brush);
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_STENCIL_TEST);
 
@@ -356,6 +388,8 @@ int main()
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClear(GL_COLOR_BUFFER_BIT);
         glBindTexture(GL_TEXTURE_2D, screenTex);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, texture);
 
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_STENCIL_TEST);
