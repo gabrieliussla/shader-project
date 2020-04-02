@@ -17,5 +17,5 @@ void main()
 
     vec4 globalNormal = model * vec4(vNormal, 0.0);
     colour = vec3(0.8, 0.8, dot(normalize(globalNormal).xyz, normalize(light)));
-    colour = vec3(0.9, 0.8, 0.2);
+    colour = vec3(0.3, 0.9, 0.8);
 }

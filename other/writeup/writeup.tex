@@ -1,0 +1,22 @@
+\documentclass[a4paper, 12pt]{article}
+
+\setlength{\parskip}{1em}
+
+\begin{document}
+
+\title{Non-photorealistic Rendering Techniques}
+\author{Gabrielius Slakaitis}
+\date{\today}
+\maketitle
+
+\newpage
+\section{Silhouette Shading}
+The technique of silhouette shading aims to achieve two effects. The first is to set a boundary between the area that is shaded and the blank page, highlighting details that may be hard to spot due to the two-dimensionality of the image. The second is to provide a communication of lighting - render bold lines in the shadowed sections of the silhouette and thin lines in the light. This will not only provide some necessary information about the scene, but also give the illusion of an artist's touch due to the varying line weights.
+
+Most of the current methods for silhouette shading are image-based and rely on buffers to extract features. While this works for most applications, it would be difficult to flexibly vary the line width using this method while making sure the techniques work on low-poly objects*. Geometric methods can also be used to distinguish features by selecting edges on the silhouette, however making the CPU characterize these edges every frame, and passing the correct ones for the GPU to render would quickly become a bottleneck. A way to tackle this problem is to pass adjacent face information about every edge to the GPU and allow it to cull the unwanted ones, which is the heart of the algorithm. In this paper I have extended this basic idea, and used the passed information to calculate unique lighting properties of the silhouette edges to achieve the desired effect.
+
+\subsection{Preprocessing}
+
+In order to pass the required information to the GPU, an edge-list needs to be constructed with each element storing the end vertices, face normals and vertex normals. However, most generic meshes usually store the coordinates of each vertex, followed by a list of faces represented as groups of these vertices. It is also convention for every face to have its own version of a vertex, which leads to a single corner of a model often having three or more vertices associated with it. The goal of this preprocessing step is to extract this information from any given mesh.
+
+\end{document}
