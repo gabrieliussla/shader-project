@@ -29,7 +29,6 @@ void main()
     mat4 M = projection * view * model;
     vec4 pos = (M * vec4(v, 1.0));
 
-
     // calculate witdh multiplier
     vec3 vertex        = (model*vec4(v,  1.0)).xyz;
     vec3 vertex2       = (model*vec4(v2, 1.0)).xyz;
@@ -62,12 +61,13 @@ void main()
     s2.x *= ratio;
     ns.x *= ratio;
 
-    vec2 p  = normalize(vec2(s.y-s2.y, (s2.x-s.x))); //error here, calculating wrong normal
+    vec2 p  = normalize(vec2(s.y-s2.y, (s2.x-s.x)));
     vec2 m  = normalize(ns-s);
-    if(dot(p, m) < 0) p = -p;
 
     p.x /= ratio;
     m.x /= ratio;
+
+    if(dot(p, m) < 0) p = -p;
 
     // set position
     switch(kind){
@@ -75,10 +75,10 @@ void main()
             gl_Position = pos;
             colour = vec4(0.0, 0.0, 0.0, 1.0); break;
         case 1:
-            gl_Position = pos+vec4(vW*p, 0.0, 0.0); // error, shifts too much in x
+            gl_Position = pos+vec4(teW*p, 0.0, 0.0);
             colour = vec4(0.0, 0.0, 0.0, 1.0); break;
         case 2:
-            gl_Position = pos+vec4(vW*m, 0.0, 0.0); // error, bad angle
+            gl_Position = pos+vec4(teW*m, 0.0, 0.0);
             colour = vec4(0.0, 0.0, 0.0, 1.0); break;
         default:
             gl_Position = pos;
