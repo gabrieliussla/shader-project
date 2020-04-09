@@ -1,7 +1,12 @@
 \documentclass[a4paper, 12pt]{article}
+\usepackage{float}
 \usepackage{mathtools}
+\usepackage{amsmath,amssymb}
+\usepackage{algorithm2e}
 
 \DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
+\DeclarePairedDelimiter{\norm}{\lVert}{\rVert}
+\DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
 
 \setlength{\parskip}{1em}
 
@@ -13,14 +18,20 @@
 \maketitle
 
 \newpage
+
+
+
 \section{Silhouette Shading}
+
 The technique of silhouette shading aims to achieve two effects. The first is to set a boundary between the area that is shaded and the blank page, highlighting details that may be hard to spot due to the two-dimensionality of the image. The second is to provide a communication of lighting - render bold lines in the shadowed sections of the silhouette and thin lines in the light. This will not only provide some necessary information about the scene, but also give the illusion of an artist's touch due to the varying line weights.
 
 Most of the current methods for silhouette shading are image-based and rely on buffers to extract features. While this works for most applications, it would be difficult to flexibly vary the line width using this method while making sure the techniques work on low-poly objects*. Geometric methods can also be used to distinguish features by selecting edges on the silhouette, however making the CPU characterize these edges every frame, and passing the correct ones for the GPU to render would quickly become a bottleneck. A way to tackle this problem is to pass adjacent face information about every edge to the GPU and allow it to cull the unwanted ones, which is the heart of the algorithm. In this paper I have extended this basic idea, and used the passed information to calculate unique lighting properties of the silhouette edges to achieve the desired effect.
 
 % add an explanation of which edges will be culled by this stage or in a seperate section
 
+
 \subsection{Preprocessing}
+
 % by this point need to have an idea why we could need the edge coordinates, face normals and vertex normals for the first two sentences
 % possibly move towards the end
 In order to pass the required information to the GPU, a list of all edges in the mesh needs to be constructed. Neighbouring face normals and vertex normals should also be known for each edge. However, most generic meshes usually only store the coordinates of each vertex, followed by a list of faces represented as groups of these vertices. It is also a convention for every face to have its own version of a vertex, which leads to a single corner of a model often having three or more vertices associated with it. This is a problem as in this case the vertex normals cannot be calculated by averaging the normals of faces that include it, and finding unique edges becomes a challenge. The goal of this preprocessing step is to extract this necessary information from any given mesh before any rendering is done.
@@ -29,7 +40,9 @@ In all standard formats we can easily iterate through the faces of the model and
 
 Even if this stage only happens at the start of the program, a very large number of vertices may be processed, so an unordered map structure is used to reduce the loading time. This means writing and accessing of elements are $O(1)$ operations, making the whole preprocessing stage run in $O(\abs{faces})$ time. In practice this happens almost instantly for thousands of faces.
 
+
 \subsection{Rendering the edge}
+
 % possibly move this to 'geometric' section at the top
 Using line primitives in OpenGL leads to uncertainty. In some cases using a particular line width might not be supported by an implementation and if this happens, the closest supported width would be used. In fact most graphics APIs do not guarantee the ability to rasterize lines of any width other than one pixel. This means constructing the edges from triangles is the only reliable option as the exact dimensions can be accurately controlled. In addition, line joining is not supported, which leads to artifacts as shown in [figure] when drawing thick lines. There are several styles of line joins that could be used to fix this by adding caps between two lines [source]. However, they all rely on some knowledge about both the edges, and the GPU will not have this information since processing of each vertex is independent. To counter this problem I will modify and extend an algorithm described in [source], which uses the vertex normal - the only mutual information available between edges - to generate edge caps.
 
@@ -50,6 +63,7 @@ Note that it does not matter whether $v$ or $v'$ are used in this formula, so th
 
 When all the positions of the vertices are known, triangles can be rendered. The vertices describing every edge will be passed into the vertex shader as one long list - every six vertices defining one edge. On top of that, information has to be given about where to draw the triangles between the vertices. This is given by an index list, where every three indices represent a triangle that is rendered. For each edge i in the vertex list (which has vertex indices ranging from 6i to 6i+5) a 12 index list section is defined that describes these four triangles: [6i, 6i+2, 6i+3, 6i, 6i+3, 6i+1, 6i, 6i+4, 6i+2, 6i+1, 6i+3, 6i+5]. This pattern is repeated for every edge.
 
+
 \subsection{Alternative solutions}
 
 The algorithm for construction edges and caps in the given way is not perfect in all scenarios. A particular edge of the model has a constant width from one side to the other. This is exactly what is required when drawing low poly objects where straight lines do in fact represent a flat surface, but not always satisfactory when trying to represent a smooth curve seen in [figure].
@@ -65,7 +79,7 @@ While this is a great improvement, there is still an issue present in this resul
 In order to make the edges independent from their weight, edge normals or vertex normals cannot be used for the lighting calculation. Instead, the position of the eye and in relation to the edge proves to be helpful. The vector describing the gaze from the eye to a particular point of the mesh can be easily found. Imagining the surface of the mesh to be infinitely smooth, no matter the position of the eye, the normal vector on the silhouette will be exactly perpendicular to the this gaze. To fully define this normal in three dimensions it needs another parameter. The direction of the edge itself can be used for this, since the normal has to be perpendicular to this edge. Now we can express this normal formally:
 $$(v-eye) \times (v-v_2)$$
 This indeed solves the artifact, however the problem of every edge having a uniform weight throughout its length reappears.  This leads to the same steps on the curve as seen in the original method [figure]. Sadly this problem is not easily fixed. It would be intuitive to use the vertex normals in order to calculate this perpendicular instead of the direction of the edge. In fact, the calculation for the vector would then become
-$$(v-eye) \times [n x (v-eye)]$$
+$$(v-eye) \times [n \times (v-eye)]$$
 rewritten to reduce shader computation as
 $$[(v-eye) \cdot (v-eye)]n - [(v-eye) \cdot v](v-eye)$$
 However this brings back the dependency of the vertex normals and the original artifact comes back, rendering the approach useless.
@@ -77,12 +91,105 @@ Both of the vertex-based and tangent-based methods would eventually lead to perf
 
 
 
-\section{Texture generation}
+\section{Texture Generation}
 
 The second stage of the shader will add a watercolour fill to the objects that are being drawn. A common technique for the basis of this type of shading is cel shading. In cel shading the light values across the object are calculated as usual, but then light intensity thresholding is applied to it. This constructs separate fields with constant colour values, the further away from the light, the darker the field. Sometimes the harsh borders generated by the edges of the fields seem unnatural and there are often unsatisfying effects - for example only an area of a few pixels having a certain colour, which an artist wouldn't consider shading. Since the silhouette edges already indicate a sense of lighting, this is not necessary for this particular drawing style. To avoid these unnecessary artifacts, the whole fill will be a constant colour.
 
 Another issue that arises is related to continuity when we actually try to texture the shape to look like paint. The trivial way to add texture to the fill of the shape would be to add a texture to the object mesh itself. This is not satisfactory - the result will not give the illusion of 2D paint, since viewing the faces at an angle will make the assigned texture appear squished. The other simple solution is take a watercolour texture spanning the whole screen and crop it to match the shape of the object. This will indeed look 2D, but if we move around the shape in the scene it will appear extremely unnatural - as if the object was a hole through which the texture is seen. This issue can be solved when the shape moves vertically, horizontally, towards and away from the camera by translating and enlarging the texture accordingly. Rotation around the object however has no trivial solution that would look natural.
 
-The idea behind my method of shading is generating a set of key points on the 3D mesh which will act as anchor points for the texture. These points will act naturally when moving around an object as they are attached to the the surface. Now, the screen coordinates of these anchor-points can be used as parameters in the generation of a 2D texture. There are many ways to do this that would lead to interesting effects, but in this paper I will consider a basic version which simply places a 2D blob on each one of the anchor-points in the texture.
+The idea behind my method of shading is to generate a set of key points on the 3D mesh, which will act as anchor points for the texture. These points will behave naturally when moving around an object as they are attached to the surface. Now, the screen coordinates of these anchor-points can be used as parameters in the generation of a 2D texture. There are many ways to do this that would lead to interesting effects, but in this paper I will consider a basic version which simply places a 2D blob on each one of the anchor-points in the texture.
+
+
+\subsection{Preprocessing}
+
+Since the coordinates of the anchor-points stay constant throughout the program, they will be calculated in a preprocessing stage. In order for the final result to look natural the positions of these points will have to be random. It is also necessary that the points are placed with high enough density, so that there is no section left untextured. An algorithm will iterate through the faces of the mesh one by one and generated the points for each. This will happen in two stages: first, the number of points will be determined for the particular mesh and then, the points will be assigned a random position on the face:
+
+\paragraph{Point count.}
+Since the faces of a model can be many different sizes, generating the same number of points for each would lead to an uneven distribution. This means the area of a triangle will be taken into account, $\frac{1}{2}\norm{(v_2-v_1) \times (v_3-v_1)}$. The following algorithm is then used to determine the number of points that have to be generated:
+
+\begin{algorithm}[H]
+$count \leftarrow \floor{area \times density}$\;
+$prob \leftarrow frac(area \times density)$ \tcp*{returns the decimal part}
+\If{prob succeeds}{
+    $count \leftarrow count+1$\;
+}
+\end{algorithm}
+
+To make sure this distribution is even, consider the expected value for the number of points on a face:
+\begin{eqnarray*}
+\mathbb{E} (points) & = & \floor{area \times density} + prob \\
+& = & \floor{area \times density} + frac(area \times density) \\
+& = & area \times density
+\end{eqnarray*}
+Clearly this value is directly proportional to the area. Assuming that the probability of the anchor being placed on any single point on the triangle is equal, this is enough to prove that the expected value for any two areas on the whole mesh is the same. In other words, no area of the mesh will have a higher concentration of points than any other. It could still be said that this distribution is not completely random, since if the area of the face is bigger than $area \times density$, it is guaranteed for a point to be placed there. In the current scenario this could be viewed as advantage, as areas with a complete lack of anchor-points are unwanted. Moreover, the points will still have a random position and look irregular.
+
+\paragraph{Point position.}
+To make sure that the point has an even probability of being placed anywhere on the face, we will use the following method, where $v_1$, $v_2$, $v_3$ represent the three vertices of the triangle:
+
+\begin{algorithm}[H]
+$r_1 \leftarrow$ random number in range $[0,1]$\;
+$r_2 \leftarrow$ random number in range $[0,1]$\;
+\If{$r_1 + r_2 > 1$}{
+    $r_1 \leftarrow 1-r_1$\;
+    $r_2 \leftarrow 1-r_2$\;
+}
+$coordnates \leftarrow v_1 + r_1(v_2-v_1) + r_2(v_3-v_1)$
+\end{algorithm}
+
+The algorithm uses two edges of the triangle as axes. Two random numbers are generated that determined how far along each one the point will be positioned. This gives every point on the triangle an even chance. The only complication is that the valid area defined by the two edges forms a rhombus. If the position falls outside of the triangle, it can be transformed into the valid area without losing the fair distribution and without having the repeat the random number generation.
+
+In addition to the coordinates, the points can carry additional information that is useful in later calculations and texture generation. In particular, their normals will be used to give an indication if the anchor-point is visible, which are defined as the normals of their respective faces. These are easy to calculate as we iterate through the faces of the model. In addition to this, any number of additional parameters can be created at this stage that may be needed for the texture generation. Some examples of this per-point information could be unique colour values, light values, texture indices, size parameters or anything else.
+
+\subsection{Points in the shader}
+The actual colour of the object will be determined by the previous rendering stage, where the object was rendered on top of the silhouette to cover unseen edges. In this demonstration, the texture will be generated by placing a square brush-texture on each one of the anchor points. This will be done by passing four vertices into the vertex shader that represent a square centered on an anchor-point, and the texture can then be placed on this square using two triangle primitives.
+
+For each of the four vertices passed into the shader, define attributes ($v$, $n$, $i$) where $v$ is the position; $n$ is its normal and $i$ is an integer between 0 and 3 determining which corner of the square the vertex will represent. Calculating the positions of the vertices is trivial: transform the position $v$ into screen space and, depending on the value of $i$, add or take away some constant from the x and y coordinates to make it the correct corner. It follows automatically that anchor-points further away appear smaller, as the w-value of the coordinate will not be changed so the constant will be divided by a larger value when further from the eye position*. Along with the list of four vertices we will pass an index list [0, 1, 3, 0, 3, 2] that specifies the two triangles to be drawn. Since a texture is being applied, the vertex shader has to also pass the appropriate texture coordinates to the fragment shader for each of the vertices, which are simply the four texture corners depending on $i$.
+
+
+\subsection{Transparency}
+The brush-texture that is going to be added to the anchor-points will have transparency, and many of these textures might be overlapping arbitrarily. For this reason each of the squares will have to be rendered in a separate pass and blending will be use to merge them together and form the final image.
+
+Blending has to be configured so that the shader knows exactly what to do when drawing a transparent object. In OpenGL, this can be specified by the following function:\\
+\centerline{\texttt{glBlendFunc(GL\_SRC\_ALPHA, GL\_ONE\_MINUS\_SRC\_ALPHA)\;}}\\
+This specifies that when a new transparent pixel is drawn over a scene, the resulting colour is a linear combination of the alpha value multiplied by the new pixel colour and the remainder of the alpha value multiplied by the old colour. This gives the desired result as when the alpha value is low, not as much of the colour is contributed and the object appears transparent.
+
+One result that has to be considered is that drawing order of transparent objects is not commutative. If the brush-textures were drawn in one order on the first frame and in a different order on the second, the resulting colour values will differ even if nothing else about the scene has changed. This means the order in which the anchor-points are considered has to remain fixed through the program. While this is not a challenge, it's something that has to be considered in order to make sure the result is consistent.
+
+\subsection{Visibility control}
+In a sense, the anchor-points that are being considered lay on the surface of the mesh, so when an object is seen, the points on the rear side of the mesh should not be visible as they are hidden. If the texture were to keep all of these points, rotating around an object would cause the anchor-points attached to the front of the object to move appropriately, but the ones on the rear side would move in the complete opposite direction at the same time. This would look very unnatural, making it difficult to tell in which direction the rotation is happening in. For this reason, anchor-points obstructed by the mesh should not be visible.
+
+One way to consider hiding these points is to apply a similar technique as for the silhouette. The depth buffer values of a simple render of the object can be used to cover squares that are behind the front of the object. However this can lead to sections of squares being clipped off, leading to harsh artifacts, demonstrated in [figure]. To avoid this, the depth testing will be disabled when rendering these brush-textures and a different approach will be used.
+
+In this method, normals of the anchor-points will be used to determine their visibility. If the normal is facing away from the eye position, then clearly the anchor point is not visible and should not be considered in texture generation. However, simply setting the visibility of these points to 0 would lead to an unwanted effect. If you imagine an anchor-point on the edge of an object there will be some point where it turns from being visible to hidden. At this point half of the brush-texture will still be on the object, and it will lead to a sudden disappearance of this texture. Many points exhibiting such an effect would cause many flickers at the edges of the object as textures pop in and out of view. To fix this, the texture will be faded away as it gets closer to the edge. The magnitude of this fade is determined using the normal once again - facing further from the eye will make the visibility decrease:
+$$\frac{v-eye}{\norm{v-eye}} \cdot normal$$
+Since OpenGL treats negative alpha values as 0, this simple formula is enough to make the points with their normals facing away invisible. In practice this works wonderfully and it is hard to tell that any fading is happening at all. In addition, since the edges of the object are likely to have a higher concentration of anchor-points, reducing their visibility balances the fill.
+
+To speed up performance it is possible to transform the points with visibility lower than 0 behind the clipping plane (in a similar fashion to the unwanted silhouette edges), so they're not even considered in rasterization.
+
+A final consideration is that as the object gets further away, the brush-textures will get smaller in turn. This is not sensible after a certain level, as the texturing of a watercolour drawing wouldn't get finer for smaller objects. This could be tackled in a similar way to [source], where custom mip-maps are used to render far objects. In this approach, each larger mip-map level is a superset of every smaller level, which ensures that the transitions remain smooth. Similarly, every anchor-point could have attached to it an extra value which would represent its level. When looking at a far away object, only the anchor-points with a high enough level would be visible and moving closer would fade in the points of the lower levels*. This would allow the anchor-points to retain their size no matter the distance, however, this technique is beyond the scope of this paper. As an easy fix, the far anchor-points will simply reduce in opacity to fix the issue. While this will mean that large objects that are far away will have little texture, in most cases this is acceptable. The final opacity calculation is:
+$$strength \times \norm{v-eye} \times [\frac{v-eye}{\norm{v-eye}} \cdot normal]$$
+
+\subsection{Cropping to objects}
+Cropping to objects
+Until this section, whole brush-textures are simply rendered on top of each one of the anchor-points. When these points are close to the edge, the textures will extrude outside of the object bounds. To fix this we will crop all textures to the valid area using a stencil buffer.
+
+The stencil buffer stores a value for every pixel through the rendering process. These values can be updated in one render pass and used to make checks in another. In this application the buffer will track the pixels that are valid for the textures to be drawn over. Value 1 in the buffer represents a valid pixel on the object, and 0 means the texture should not be drawn here.
+
+At the start of each frame iteration the stencil buffer should be cleared to all 0s to make sure the previous frame doesn't have any effect on the following. The next stage in the render process is drawing the fill, which updates the depth buffer for the silhouette and sets the base colour for the object. Wherever the fill is drawn the watercolour textures should be drawn over it, so it is specified that any pixels processed by the fragment shader at this stage should have their stencil buffer value set to 1. In the following step the silhouettes themselves are drawn. The silhouette lines should be a solid colour, so the pixels processed in this stage will have the stencil values set back to 0, making sure the textures will not be drawn over them. This step requires care, since it also processes the lines that might be hidden by the fill. For this reason, it is specified that at this stage the stencil values get updated only if the depth test has passed; when the silhouettes are drawn.
+
+At this stage the stencil buffer is fully set and the textures can finally be drawn over the object. To provide the desired effect, a stencil test is set up. A stencil test is run for every pixel in relation to its value in the stencil buffer. If the test is passed the pixel is drawn as usual, otherwise it is discarded. For this effect only pixels with a stencil value of 1 should be drawn. In OpenGL this test looks as:\\
+\centerline{\texttt{glStencilFunc(GL\_EQUAL, 1, 0xFF)\;}}\\
+The test is passed if the value in the buffer is eaqual 1. 0xFF means that we don't apply a mask when considering the buffer value.
+
+There is an issue that arises when multiple objects are drawn using the same stencil buffer. The buffer specifies the areas of both objects as valid, so when an anchor-point is on the edge of one object, the corresponding texture may bleed out and be visible on the other object. This is not difficult to correct. Each object will be assigned an id, and this id will be used when populating the values of the stencil buffer for that particular object instead of just 1. This provides another case where we need to check that the depth test has passed before updating the stencil values, since the stencil buffer should only hold the id of an object if it is in front of all the others. Now, when drawing brush-textures for a particular object, the stencil test becomes:\\
+\centerline{\texttt{glStencilFunc(GL\_EQUAL, id, 0xFF)\;}}\\
+
+\subsection{Further improvements}
+Two artifacts remain undiscussed in the previous sections. One concerns the fact that the normal of an anchor-point may face the direction of the eye even if it is covered by the front of the object. In fact, for any concave mesh there will be an angle from which such covered face will have its normal towards the eye. Another artifact caused by more complex meshes is when a closer and further part of the mesh are separated by a silhouette edge. In this case the same problem reappears where the brush-texture of a closer point bleeds into the rest of the object.
+
+\paragraph{Centred depth testing.}
+A different method to get rid of the result displayed in [figure] is by centralising the depth test. This means the whole square would be drawn purely based on whether the anchor-point passes the depth test. Since the anchor-point is currently directly in the surface of the mesh it would not consistently pass a depth test in any scenario, so it has to first be extruded out of the shape along its normal by some small magnitude [epsilon]. It wouldn't be possible to use the depth buffer in the standard way to achieve this central test, as each fragment only has access to its own depth value. However it is possible to write the values of the depth buffer into a new buffer when rendering the previous stages and then access this as a texture in the shader. Doing this, each fragment can access any depth value on the screen, in particular the value that is the anchor-point, and the depth test could be programmed directly in the fragment shader. Keep in mind that the use of normals is still necessary in order to fade the textures out, but this ensures that no hidden points are ever visible.
+
+As an optimisation, this test could be done in the vertex shader, making it per-vertex rather than per-fragment. However accessing a texture in the vertex shader is not supported by many GPUs, so it will not be considered in this paper.
 
 \end{document}
