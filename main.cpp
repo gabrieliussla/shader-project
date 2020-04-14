@@ -24,10 +24,12 @@
 
 int screenWidth = 600;
 int screenHeight = 600;
-int screenChange = 0;
+int screenChange = 1;
 
+float startTime;
 float deltaTime;
 float lastFrameTime;
+long totalFrames = 0;
 
 glm::vec3 cameraPos = glm::vec3(-1.4, 2.9, -2.2);//glm::vec3(4.2, 3.2, 6.2);
 glm::vec3 cameraFront = glm::vec3(0.5, 0.0, 0.8);//glm::vec3(-0.5,0,-0.8);
@@ -50,6 +52,8 @@ bool processInput(GLFWwindow* window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+    if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS)
+        cout << ((float)totalFrames/(lastFrameTime-startTime)) << '\n';
 
     float cameraSpeed = deltaTime * 2;
     float cameraTurnSpeed = deltaTime * 2;
@@ -84,7 +88,6 @@ bool processInput(GLFWwindow* window)
         cameraFront.x = sin(cameraYaw);
         cameraFront.z = -cos(cameraYaw);
     }
-
     return move || turn;
 }
 
@@ -136,7 +139,7 @@ int main()
     Shader fill("shaders/fill.vert", "shaders/fill.frag");
     Shader edges("shaders/edge.vert", "shaders/edge.frag");
     Shader textures("shaders/texture.vert", "shaders/texture.frag");
-    Shader image("shaders/image.vert", "shaders/imagefx.frag");
+    Shader image("shaders/image.vert", "shaders/image.frag");
 
     ///// CAN MAKE THIS NICER
     // Setup models
@@ -270,9 +273,9 @@ int main()
 
 
     //----- Render Loop -----//
-
-    while (!glfwWindowShouldClose(window)) {
     
+    startTime = (float)glfwGetTime();
+    while (!glfwWindowShouldClose(window)) {
         ///// MAKE THESE UPDATES BETTER (MINIMIZE SWITCHES)
         if (processInput(window)) {
             view = glm::lookAt(cameraPos, cameraPos+cameraFront, cameraUp);
@@ -286,7 +289,7 @@ int main()
             textures.setVec3((char*)"eye", cameraPos);
             image.use();
             glm::vec3 screenLight = screen(projection*view, glm::vec3(0.0, 8.0, 0.0));
-            screenLight.z = 5;
+            screenLight.z = 3;
             if(screenLight.x >  2) screenLight.x =  2;
             if(screenLight.x < -2) screenLight.x = -2;
             if(screenLight.y >  2) screenLight.y =  2;
@@ -397,6 +400,7 @@ int main()
 
         glfwSwapBuffers(window);
         glfwPollEvents();
+        totalFrames ++;
     }
 
     glfwTerminate();

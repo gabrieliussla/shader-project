@@ -226,6 +226,4 @@ void Model::processTextureMesh(aiMesh *mesh, const aiScene *scene){
             pointCount++;
         }
     }
-    cout << meshes.size() << " meshes!\n";
-    //std::random_shuffle(meshes.begin(), meshes.end(), [](int i)->int{return rand()%i;});
 }

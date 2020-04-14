@@ -90,6 +90,24 @@ In reality a single object might contain one section which has sharp corners and
 Both of the vertex-based and tangent-based methods would eventually lead to perfect transitioning as the detail of the mesh tends towards infinity. In practice, the artifact caused by the vertex-based method is much less frequent. Generally the constrain of independence between edges makes the task of making the silhouette appear completely smooth a challenge. If a vertex had access to both the neighbouring edge normals, using the tangent method and using the average of the two edges would allow perfectly smooth transitioning.
 
 
+\subsection{Covered edges}
+Some of the edges that are seen using this silhouette method lay on the opposite side of the mesh to the eye. These edges should not be visible as they give away detail that is hidden by the object itself, yet they satisfy the specification of one normal facing towards and the other facing away from the position of the eye. In addition, If several objects are rendered like this, they will not obstruct each other and appear see-through. While sometimes this might be a nice effect, often times it leads to uncertainty in which part of the scene is closer, and even what direction an object is facing. A technique described in [source] will be employed in order to hide these unwanted edges by using the depth buffer (sometimes also called z-buffer).
+
+When a primitive is rendered to the screen, the depth buffer stores how far each fragment is from the screen. The further away, the higher the value. This includes the silhouette edges, since their depth values are kept when the screen coordinates for each vertex are calculated. Applying the method in [source], a first pass in the shader renders all of the faces of the object before the silhouette as seen in [figure (a)]. During the pass, the depth buffer values are set accordingly for each fragment. Now when the silhouette as in [figure (b)] is drawn in a second pass, a depth test is applied. Silhouette edges that are behind an object will have a higher depth value than the one stored by the previous pass, and will not be rendered, leading to the result shown in [figure (c)].
+
+In the paper, the z values of the lines have to be displaced forward by some amount, to make sure that they are not hidden by the surrounding mesh. In this case that is not a problem, since we're only drawing the silhouette on the outside of the object, so it would never be covered by the mesh itself. This is an advantage as it avoids any artifacts caused by setting the z displacement to a value too low or high. Usually, the optimal displacement would be non-trivial since it differs from scene to scene.
+
+As seen in the result, this has a side-effect of giving some colour to an object, as well as clearly defining the region on the screen within which the object exists. Both of these facts will prove useful in the following sections.
+
+
+\subsection{Summary}
+Using the geometric method allows us to cull unwanted edges and process their parameters in order to get the exact weights for every part of the mesh, no matter what the object is. Considering this, the geometric approach has its own disadvantages. In particular, any edge of the mesh is either drawn or culled; there is no medium value. This can lead to a jittery look if a model contains a silhouette that ends on the model. The exact point it ends on can only be where one of the edges end, and a small change in the viewing angle might lead to a new edge abruptly appearing to extend this line. In addition, looking at an inner corner of an object often leads to cases where the exact silhouette cannot be expressed as a subset of edges, exemplified in [figure]. These errors are intrinsic to the way meshes are used in describing objects and are hard to smooth out without knowledge of the surrounding edges. Only by making these meshes smoother will these effects start to disappear and converge towards the desired result. One approach in dealing with such cases is described in [source], where the stability of each silhouette edge is measured based on how likely it is to disappear, and less stable edges can be drawn with a lighter value. Although, this stability sometimes gives unintuitive results, since an edge might be likely to disappear and be replaced by a different edge, but the line itself is unlikely to disappear from the image.
+
+Another point to make is that here only silhouette edges are considered. If a particular model required more detail, then analyzing other feature edges might be useful. An obvious example of such edges are crease edges, which are defined by their neigbouring faces differing above some critical angle. Such faces could be calculated in the preprocessing of the mesh and then marked, leading to these edges always being visible (unless of course they are covered by the mesh). In our system an edge could be marked by setting the normals of the adjacent faces to be the negative of each other. In this case exclusively one of them is guaranteed to face the camera and satisfy the silhouette definition. This means the same shader program can be used as described.
+
+There is one issue with the described method related to feature edges that are not on the silhouette. When rendering the weight of the line, it is extruded perpendicular to the edge towards its normal. For silhouette edges this normal is always the exterior of the object, however for an arbitrary edge it might change depending on the angle. This will lead to the direction of extrusion abruptly reversing when moving over the edge normal. Of course, the system can be altered to have every silhouette extrude in both directions from the edge. In this case the edge cap technique would have to be adapted to get rid of cracks on the inside of the shape*.
+
+
 
 \section{Texture Generation}
 
@@ -140,6 +158,7 @@ The algorithm uses two edges of the triangle as axes. Two random numbers are gen
 
 In addition to the coordinates, the points can carry additional information that is useful in later calculations and texture generation. In particular, their normals will be used to give an indication if the anchor-point is visible, which are defined as the normals of their respective faces. These are easy to calculate as we iterate through the faces of the model. In addition to this, any number of additional parameters can be created at this stage that may be needed for the texture generation. Some examples of this per-point information could be unique colour values, light values, texture indices, size parameters or anything else.
 
+
 \subsection{Points in the shader}
 The actual colour of the object will be determined by the previous rendering stage, where the object was rendered on top of the silhouette to cover unseen edges. In this demonstration, the texture will be generated by placing a square brush-texture on each one of the anchor points. This will be done by passing four vertices into the vertex shader that represent a square centered on an anchor-point, and the texture can then be placed on this square using two triangle primitives.
 
@@ -155,6 +174,7 @@ This specifies that when a new transparent pixel is drawn over a scene, the resu
 
 One result that has to be considered is that drawing order of transparent objects is not commutative. If the brush-textures were drawn in one order on the first frame and in a different order on the second, the resulting colour values will differ even if nothing else about the scene has changed. This means the order in which the anchor-points are considered has to remain fixed through the program. While this is not a challenge, it's something that has to be considered in order to make sure the result is consistent.
 
+
 \subsection{Visibility control}
 In a sense, the anchor-points that are being considered lay on the surface of the mesh, so when an object is seen, the points on the rear side of the mesh should not be visible as they are hidden. If the texture were to keep all of these points, rotating around an object would cause the anchor-points attached to the front of the object to move appropriately, but the ones on the rear side would move in the complete opposite direction at the same time. This would look very unnatural, making it difficult to tell in which direction the rotation is happening in. For this reason, anchor-points obstructed by the mesh should not be visible.
 
@@ -168,6 +188,7 @@ To speed up performance it is possible to transform the points with visibility l
 
 A final consideration is that as the object gets further away, the brush-textures will get smaller in turn. This is not sensible after a certain level, as the texturing of a watercolour drawing wouldn't get finer for smaller objects. This could be tackled in a similar way to [source], where custom mip-maps are used to render far objects. In this approach, each larger mip-map level is a superset of every smaller level, which ensures that the transitions remain smooth. Similarly, every anchor-point could have attached to it an extra value which would represent its level. When looking at a far away object, only the anchor-points with a high enough level would be visible and moving closer would fade in the points of the lower levels*. This would allow the anchor-points to retain their size no matter the distance, however, this technique is beyond the scope of this paper. As an easy fix, the far anchor-points will simply reduce in opacity to fix the issue. While this will mean that large objects that are far away will have little texture, in most cases this is acceptable. The final opacity calculation is:
 $$strength \times \norm{v-eye} \times [\frac{v-eye}{\norm{v-eye}} \cdot normal]$$
+
 
 \subsection{Cropping to objects}
 Cropping to objects
@@ -184,6 +205,7 @@ The test is passed if the value in the buffer is eaqual 1. 0xFF means that we do
 There is an issue that arises when multiple objects are drawn using the same stencil buffer. The buffer specifies the areas of both objects as valid, so when an anchor-point is on the edge of one object, the corresponding texture may bleed out and be visible on the other object. This is not difficult to correct. Each object will be assigned an id, and this id will be used when populating the values of the stencil buffer for that particular object instead of just 1. This provides another case where we need to check that the depth test has passed before updating the stencil values, since the stencil buffer should only hold the id of an object if it is in front of all the others. Now, when drawing brush-textures for a particular object, the stencil test becomes:\\
 \centerline{\texttt{glStencilFunc(GL\_EQUAL, id, 0xFF)\;}}\\
 
+
 \subsection{Further improvements}
 Two artifacts remain undiscussed in the previous sections. One concerns the fact that the normal of an anchor-point may face the direction of the eye even if it is covered by the front of the object. In fact, for any concave mesh there will be an angle from which such covered face will have its normal towards the eye. Another artifact caused by more complex meshes is when a closer and further part of the mesh are separated by a silhouette edge. In this case the same problem reappears where the brush-texture of a closer point bleeds into the rest of the object.
 
@@ -191,5 +213,52 @@ Two artifacts remain undiscussed in the previous sections. One concerns the fact
 A different method to get rid of the result displayed in [figure] is by centralising the depth test. This means the whole square would be drawn purely based on whether the anchor-point passes the depth test. Since the anchor-point is currently directly in the surface of the mesh it would not consistently pass a depth test in any scenario, so it has to first be extruded out of the shape along its normal by some small magnitude [epsilon]. It wouldn't be possible to use the depth buffer in the standard way to achieve this central test, as each fragment only has access to its own depth value. However it is possible to write the values of the depth buffer into a new buffer when rendering the previous stages and then access this as a texture in the shader. Doing this, each fragment can access any depth value on the screen, in particular the value that is the anchor-point, and the depth test could be programmed directly in the fragment shader. Keep in mind that the use of normals is still necessary in order to fade the textures out, but this ensures that no hidden points are ever visible.
 
 As an optimisation, this test could be done in the vertex shader, making it per-vertex rather than per-fragment. However accessing a texture in the vertex shader is not supported by many GPUs, so it will not be considered in this paper.
+
+\paragraph{Object splitting.}
+The only viable way to fix the texture bleeding within the same object is to split it up into several. Indeed, if any mesh is split into purely convex sub-objects, neither of these artifacts will ever occur. The downside is that wherever the split happens there will be a harsh line even if we specify for the silhouette not to be drawn on the divide, since all of the textures on one side of the line will be cut from going to the other. This could be fixed in a few ways, including assigning the anchor-points close to the split both of the objects as valid, however even this wouldn't solve the issue for all angles. The best approach is to split the object only where a silhouette line would be welcome* and keep that from covering the texture interference. Here, even if the objects are just close to convex, the artifacts will be minimal.
+
+
+
+\section{Screenspace Effects}
+The following algorithms will apply effects to the whole screenspace, including the areas that have not been touched by the previous render stages. Fragments in these algorithms might require access not only to local information, but also their neighbouring pixels or anything else on the screen. To allow this, the preceding stages render their results to a framebuffer object rather than the screen, where the colour values and any other necessary information are stored as textures. This texture can be sent to the shaders, where it will be drawn on a rectangle spanning the entire screen - each corner will be assigned the appropriate texture coordinates. Now the fragment shader has access to the whole screenspace via this texture and can access a fragment's neighbours by simply adding to its given texture coordinates.
+
+
+\subsection{Wobbling}
+When applying paint to paper, the resulting lines are not perfectly crisp; the grain in the paper causes pigments to drift in some sections [source]. For this effect, fragments may use the values of their neighbours, which simulates this pigment movement. The exact neighbour that is used is determined by the offset ($\mathit{off}_x$, $\mathit{off}_y$), taken from a paper normal map. The new texture coordinates are calculated as:
+$$\begin{bmatrix}x'\\y'\end{bmatrix} = \begin{bmatrix}x\\y\end{bmatrix} + c\begin{bmatrix}\mathit{off}_x\\\mathit{off}_y\end{bmatrix}$$
+Here ($x$,$y$) are the original texture coordinates passed into the fragment shader, and ($x'$,$y'$) are the coordinates after distortion. The magnitude of the wobble effect is controlled by a constant $c$. The result can be seen in [figure]
+
+
+\subsection{Paper texture}
+Currently the watercolour objects look out of place when floating in space. To fix this an effect will be applied that makes the screen look like paper. In principle this technique is simple: the paper normal texture will be used as a bump map for the whole screen [source]. Doing this, the light value of a particular pixel becomes:
+$$\mathit{paperNormal} \cdot \mathit{lightDirection}$$
+This light value is multiplied by the pixel colour to get the final result. It could be argued that the negative values should be brought up to 0, since negative colours are not well defined, however OpenGL will automatically treat them as black. Furthermore this method will never produce negative values, so computation will not be spent doing this.
+
+Now consider where the position of the light should actually be. After all, it would be a nice touch that when the light in the scene is coming from above the paper itself would be illuminated from the same direction. It would be nonsensical to work with world coordinates of the light, so there will have to be some processing. First the light position will be converted to screen coordinates, which represent where on the paper this light source is. This conversion will provide a depth value too, however using this new light position would make the screen completely black if this z value is behind the paper. Likewise, if the light is extremely close to the paper, the fragments on the edge of the screen will be at a sharp angle to the light, making them look unnaturally dark. To counter these effects, the z value of the screen coordinates will be set to some constant value which is a fair distance from the paper (3 is used in the figures). Additionally sharp angles might be created when the x or y coordinates of the light are very far from the screen, which leads to a very dark screen when the angle of the camera is close to 90 degrees from the light. To fix this, the x and y coordinates are clamped to a fixed range, so that they never become extreme, but still give enough of an effect (in the examples the range is [-2,2], where the coordinates on the screen itself are in [-1,1]). This light position will be computed at the start of every frame in the CPU, as the same position can be used in every fragment.
+
+
+\subsection{Anti-aliasing}
+By default every pixel on the screen is assigned a colour based on whether the centre of the pixel is covered by some primitive in the rasterisation stage. This can lead to jagged edges on objects, so a multisampling technique is used in order to get several values for every pixel and average them. This is fairly standard, so OpenGL provides multisample buffers that can store these values. Configuring the screen to use such a buffer is simple, however the technique used in this section requires that the texture storing the screen itself is multisampled, which the is mildly harder. The image is rendered to a intermediate multisample buffer which has to be set up manually. An OpenGL function allows the data to be transferred to a regular buffer with a non-multisampled texture attachment. This texture is then be passed to the shaders and used as usual.
+
+
+\subsection{[Note]}
+The annoying detail of a non-square screen ratio has to be considered here too. Stretching in the paper texture is undesirable, so the texture coordinates in the vertex shader will be altered to crop the imageto the shape of the screen accordingly. Unfortunately, this means different texture coordinates need to be used for the paper texture and the rendered texture.
+
+These final effects look great for still images. However, while the change in lighting on the paper texture does provide some variability, the paper texture stays constant for every position and rotation of the camera. This removes the immersion of the idea that the objects are drawn on the paper while the camera is in motion. This would be improved if the paper moved along with the objects, however since the objects move at different rates in the 3D environment due to perspective projection, this exercise becomes non-trivial.
+
+
+
+\section{Discussion}
+
+\subsection{Impact of animation}
+Currently the system only deals with model transformations and the movement of the light source. However in many applications, meshes are rigged and skeletal animation can effect local areas of the mesh. The skeletal animation technique was first introduced in [source] and is now used in most animation systems. A model is constructed from a regular mesh and a series of bones connected in a hierarchy. Key frames define how joints of this model move through time via local transformation matrices, and every frame transformation matrices for all bones can be interpolated. Each vertex has a set of weights that assign how the bones affect it, so the final position is determined by the weighted average of these transformations. Same methods could largely be applied for this system, but with a few considerations.
+
+When calculating the silhouette edges, the face normals are currently calculated in a preprocessing stage and passed into the shader for condition testing. In an rigged model however, different vertices will be transformed by different matrices, making the change in face normals unpredictable. For this reason each vertex of an edge would have to have the information on all four related vertices [figure] and calculate the face normals in the shader after transforming them accordingly. This would increase computation as each vertex would have to calculate four transformations.
+
+Anchor-points would simply be treated as regular vertices. They would have to have the required parameters which determine the effect of each of the joint transformations on such a vertex. In particular, these weights can be determined by interpolating between the parameters of the anchor-point face vertices. If there is a limit of how many joints can affect a vertex, the least dominant ones may have to be discarded and remaining weights balanced. To avoid such preprocessing complexity an alternative would simply use the parameters of the closest existing vertex.
+
+
+
+\section{Conclusion}
 
 \end{document}

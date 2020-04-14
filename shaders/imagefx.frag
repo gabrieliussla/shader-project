@@ -17,7 +17,7 @@ void main(){
     vec4 colour = texture(screenTexture, wobbleCoord);
 
     vec3 toLight = normalize(lightPos - vec3(texCoord, 0.0));
-    vec3 paperNormal = texture(paper, imageCoord).xyz - 0.5;
+    vec3 paperNormal = texture(paper, imageCoord/2).xyz - 0.5;
 
     fragColour = vec4(dot(paperNormal, toLight) * colour.xyz, 1.0);
 }

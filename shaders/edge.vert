@@ -75,10 +75,10 @@ void main()
             gl_Position = pos;
             colour = vec4(0.0, 0.0, 0.0, 1.0); break;
         case 1:
-            gl_Position = pos+vec4(teW*p, 0.0, 0.0);
+            gl_Position = pos+vec4(vW*m, 0.0, 0.0);
             colour = vec4(0.0, 0.0, 0.0, 1.0); break;
         case 2:
-            gl_Position = pos+vec4(teW*m, 0.0, 0.0);
+            gl_Position = pos+vec4(vW*m, 0.0, 0.0);
             colour = vec4(0.0, 0.0, 0.0, 1.0); break;
         default:
             gl_Position = pos;
