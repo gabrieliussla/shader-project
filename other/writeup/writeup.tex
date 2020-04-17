@@ -21,6 +21,16 @@
 
 
 
+\section{Abstract}
+
+Many modern games and graphics applications strive for realism and accuracy, however there are many advantages to non-photorealistic rendering ranging from clarity to stylisation. This paper will present a range of techniques which draw arbitrary objects as watercolour paintings in real time. It explores a geometric approach in rendering the silhouettes of the objects, which categorises the edges that need to be drawn and culls the rest. I extend this technique to convey the lighting in the scene by varying edge weights, as well as investigate different approaches to remove edge cracking artifacts caused at the intersections of thick lines. I also present a texture generation method that provides a watercolour fill. Its idea is to generate a set of points tied to the surface of the mesh which act as anchors for texture generation. These points move naturally in the 3D scene and provide the desired temporal coherence when moving around the objects, but the 2D screen coordinates of these points can be used as parameters for the watercolour effect. Finally, I apply screen-space effects to give the illusion that the whole scene is on paper, completing the overall effect.
+
+
+
+\section{Introduction}
+
+
+
 \section{Silhouette Shading}
 
 The technique of silhouette shading aims to achieve two effects. The first is to set a boundary between the area that is shaded and the blank page, highlighting details that may be hard to spot due to the two-dimensionality of the image. The second is to provide a communication of lighting - render bold lines in the shadowed sections of the silhouette and thin lines in the light. This will not only provide some necessary information about the scene, but also give the illusion of an artist's touch due to the varying line weights.
@@ -249,6 +259,10 @@ These final effects look great for still images. However, while the change in li
 
 
 \section{Discussion}
+
+\subsection{Further improvements}
+
+One of the key things about this approach is that the texture generation stage can take any form. In this paper I have discussed the method of putting brush textures over each one of the anchor-points, but this is not the only possibility as long as the anchor-point coordinates and strengths can be used as parameters (strength parameters are needed so that the fading technique would still function). The only requirement for texture generation is that the output is continuous. In other words, sufficiently small changes in the input of the texture generation algorithm should result in arbitrarily small changes in its result. These condition ensures that temporal locality is preserved. A simple example of an alternative texture generator would be a weighted Voronoi diagram, where the distance to a point is multiplied by the weight constant. While this does not provide a satisfying artistic effect, it acts a testament for more complex texture generators.
 
 \subsection{Impact of animation}
 Currently the system only deals with model transformations and the movement of the light source. However in many applications, meshes are rigged and skeletal animation can effect local areas of the mesh. The skeletal animation technique was first introduced in [source] and is now used in most animation systems. A model is constructed from a regular mesh and a series of bones connected in a hierarchy. Key frames define how joints of this model move through time via local transformation matrices, and every frame transformation matrices for all bones can be interpolated. Each vertex has a set of weights that assign how the bones affect it, so the final position is determined by the weighted average of these transformations. Same methods could largely be applied for this system, but with a few considerations.

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <vector>
 #include <filesystem>
 
 #include <glad/glad.h>
@@ -20,6 +21,13 @@
 #define BRUSH "splat"
 #define TEXTURE "paper_normals"
 
+struct Object{
+    Model *fill;
+    Model *edges;
+    Model *texture;
+    glm::mat4 modelMat;
+};
+
 //----- Globals -----//
 
 int screenWidth = 600;
@@ -35,7 +43,6 @@ glm::vec3 cameraPos = glm::vec3(-1.4, 2.9, -2.2);//glm::vec3(4.2, 3.2, 6.2);
 glm::vec3 cameraFront = glm::vec3(0.5, 0.0, 0.8);//glm::vec3(-0.5,0,-0.8);
 glm::vec3 cameraUp = glm::vec3(0.0, 1.0, 0.0);
 float cameraYaw = 2.56;
-
 
 //----- Callback functions -----//
 
@@ -91,6 +98,24 @@ bool processInput(GLFWwindow* window)
     return move || turn;
 }
 
+//----- Other functions -----//
+
+struct Object *newObject(string name, glm::mat4 model){
+    struct Object *obj = new Object;
+    obj->fill = new Model("models/"+name, 0);
+    obj->edges = new Model("models/"+name, 1);
+    obj->texture = new Model("models/"+name, 2);
+    obj->modelMat = model;
+    return obj;
+}
+
+void deleteObject(struct Object *obj){
+    delete obj->fill;
+    delete obj->edges;
+    delete obj->texture;
+    delete obj;
+}
+
 glm::vec3 screen(glm::mat4 projection, glm::vec3 vector){
     glm::vec4 proj_vector = projection * glm::vec4(vector, 1.0);
     return glm::vec3(glm::vec2(proj_vector) / glm::abs(proj_vector.w), proj_vector.z);
@@ -131,7 +156,6 @@ int main()
     // Create a viewport to span the whole window
     glViewport(0, 0, screenWidth, screenHeight);
 
-
     //----- Set Up -----//
     
     // Compile shaders
@@ -141,14 +165,10 @@ int main()
     Shader textures("shaders/texture.vert", "shaders/texture.frag");
     Shader image("shaders/image.vert", "shaders/image.frag");
 
-    ///// CAN MAKE THIS NICER
-    // Setup models
-    Model potFill("models/pot.obj", 0);
-    Model potEdges("models/pot.obj", 1);
-    Model potTexture("models/pot.obj", 2);
-    Model sphereFill("models/sphere.obj", 0);
-    Model sphereEdges("models/sphere.obj", 1);
-    Model sphereTexture("models/sphere.obj", 2);
+    // Set up all models
+    std::vector<struct Object *> objects;
+    objects.push_back(newObject("pot.obj", glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.1, 0.0))));
+    objects.push_back(newObject("sphere.obj", glm::translate(glm::mat4(1.0f), glm::vec3(-1.0f, 0.7f, -4.2f))));
     vector<ScreenVertex> vertices = {
         {glm::vec2(-1.0, 1.0),glm::vec2(0.0,1.0)},
         {glm::vec2( 1.0, 1.0),glm::vec2(1.0,1.0)},
@@ -217,7 +237,6 @@ int main()
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, 0);
     stbi_image_free(data);
-    //activate texture, might need to change if using multiple
 
     // Load paper texture
     data = stbi_load(("textures/"+std::string(TEXTURE)+".jpg").c_str(), &width, &height, &nrChannels, 0);
@@ -246,7 +265,6 @@ int main()
     // Set up uniforms
     float ratio = (float)screenWidth/(float)screenHeight;
     glm::mat4 model;
-    glm::mat4 sphereModel = glm::translate(glm::mat4(1.0f), glm::vec3(-1.0f, 0.7f, -4.2f));
     glm::mat4 view = glm::lookAt(cameraPos, cameraPos+cameraFront, cameraUp);
     glm::mat4 projection = glm::perspective(1.2f, ratio, 0.1f, 100.0f);
     
@@ -270,7 +288,6 @@ int main()
     image.use();
     image.setVec3((char*)"light", glm::vec3(0.0, 8.0, 0.0));
     image.setInt((char*)"paper", 1);
-
 
     //----- Render Loop -----//
     
@@ -338,53 +355,48 @@ int main()
 
         //shaders.setVec3((char*)"light", glm::vec3(5*sin(timeValue), 5.0, 5*cos(timeValue)));
 
-
-        glBindFramebuffer(GL_FRAMEBUFFER, framebufferMS);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, brush);
+        glBindFramebuffer(GL_FRAMEBUFFER, framebufferMS);
+
+        //draw the fill
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_STENCIL_TEST);
-
-        ///// MAKE THIS BETTER FOR MULTIPLE OBJECTS (& SHADERS)
-        //draw the fill
         glStencilMask(0xFF);
         glStencilFunc(GL_ALWAYS, 1, 0xFF);
         glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
         fill.use();
-        fill.setMat4((char*)"model", model);
-        potFill.draw(fill);
-        
-        glStencilFunc(GL_ALWAYS, 2, 0xFF);
-        fill.setMat4((char*)"model", sphereModel);
-        sphereFill.draw(fill);
+        for(int i=0; i<objects.size(); i++){
+            fill.setMat4((char*)"model", objects[i]->modelMat);
+            glStencilFunc(GL_ALWAYS, i+1, 0xFF);
+            objects[i]->fill->draw();
+        }
         
         //draw the edges
         glStencilOp(GL_KEEP, GL_KEEP, GL_ZERO);
         edges.use();
-        edges.setMat4((char*)"model", model);
-        potEdges.draw(edges);
-        edges.setMat4((char*)"model", sphereModel);
-        sphereEdges.draw(edges);
+        for(int i=0; i<objects.size(); i++){
+            edges.setMat4((char*)"model", objects[i]->modelMat);
+            objects[i]->edges->draw();
+        }
 
         //draw the texture
+        glDisable(GL_DEPTH_TEST);
         glStencilFunc(GL_EQUAL, 1, 0xFF);
         glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, brush);
         textures.use();
-        textures.setMat4((char*)"model", model);
-        potTexture.draw(textures);
-
-        glStencilFunc(GL_EQUAL, 2, 0xFF);
-        textures.setMat4((char*)"model", sphereModel);
-        sphereTexture.draw(textures);
+        for(int i=0; i<objects.size(); i++){
+            textures.setMat4((char*)"model", objects[i]->modelMat);
+            glStencilFunc(GL_EQUAL, i+1, 0xFF);
+            objects[i]->texture->draw();
+        }
        
-
         // Blit to the non-multisample buffer so it can be displayed
         glBindFramebuffer(GL_READ_FRAMEBUFFER, framebufferMS);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer);
         glDrawBuffer(GL_BACK);
         glBlitFramebuffer(0, 0, screenWidth, screenHeight, 0, 0, screenWidth, screenHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-
 
         //draw quad to screen
         glBindFramebuffer(GL_FRAMEBUFFER, 0);

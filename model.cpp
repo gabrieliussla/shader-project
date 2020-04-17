@@ -33,7 +33,7 @@ Model::Model(string path, int mode){
     Assimp::Importer importer;
     const aiScene *scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
     if(!scene || !scene->mRootNode || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE){
-        std::cout << "Loading scene failed!";
+        std::cout << "Loading scene failed!\n";
         return;
     }
     dir = path.substr(0, path.find_last_of('/'));
@@ -42,14 +42,9 @@ Model::Model(string path, int mode){
     processScene(scene, mode);
 }
 
-void Model::draw(Shader shader){
-    if(mode == 2)
-        glDisable(GL_DEPTH_TEST);
-    for(Mesh mesh : meshes){
+void Model::draw(){
+    for(Mesh mesh : meshes)
         mesh.draw();
-    }
-    if(mode == 2)
-        glEnable(GL_DEPTH_TEST);
 }
 
 void Model::processScene(const aiScene *scene, int mode){
@@ -170,7 +165,6 @@ void Model::processEdgeMesh(aiMesh *mesh, const aiScene *scene){
         }
     }
 
-    EdgeVertex prev;
     for(EdgeVertex& edgev : edgeVertices)
         edgev.nv = glm::normalize(vertexMap[edgev.v]);
 

@@ -8,27 +8,27 @@
 #include <iostream>
 using namespace std;
 
-ScreenMesh::ScreenMesh(vector<ScreenVertex> vertices, vector<unsigned int> indices){
+ScreenMesh::ScreenMesh(vector<ScreenVertex> &vertices, vector<unsigned int> &indices){
     this->screenVertices = vertices;
     this->indices        = indices;
     this->length         = indices.size();
     setUpMesh();
 }
 
-SimpleMesh::SimpleMesh(vector<Vertex> vertices, vector<unsigned int> indices){
+SimpleMesh::SimpleMesh(vector<Vertex> &vertices, vector<unsigned int> &indices){
     this->vertices = vertices;
     this->indices  = indices;
     this->length   = indices.size();
     setUpMesh();
 }
 
-EdgeMesh::EdgeMesh(vector<EdgeVertex> edgeVertices){
+EdgeMesh::EdgeMesh(vector<EdgeVertex> &edgeVertices){
     this->edgeVertices = edgeVertices;
     this->length       = edgeVertices.size() * 2;
     setUpMesh();
 }
 
-TextureMesh::TextureMesh(vector<KeyVertex> keyVertices){
+TextureMesh::TextureMesh(vector<KeyVertex> &keyVertices){
     this->keyVertices = keyVertices;
     this->length      = 6;
     setUpMesh();
@@ -86,18 +86,6 @@ void SimpleMesh::setUpMesh(){
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
 
     glBindVertexArray(0); //unbind VAO
-}
-
-vector<EdgeVertex> addtovec(vector<EdgeVertex> vector, glm::vec3 v, glm::vec3 v2, glm::vec3 nv, glm::vec3 nA, glm::vec3 nB, short kind){ //TESTING
-    EdgeVertex e;
-    e.v = v;
-    e.v2 = v2;
-    e.nv = nv;
-    e.nA = nA;
-    e.nB = nB;
-    e.kind = kind;
-    vector.push_back(e);
-    return vector;
 }
 
 void EdgeMesh::setUpMesh(){

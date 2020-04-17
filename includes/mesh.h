@@ -43,13 +43,11 @@ class Mesh{
         void setUpMesh();
 };
 
-//CHANGE TO PASS BY REFERENCE
-
 class ScreenMesh : public Mesh{
     public:
         vector<ScreenVertex> screenVertices;
         vector<unsigned int> indices;
-        ScreenMesh(vector<ScreenVertex> vertices, vector<unsigned int> indices);
+        ScreenMesh(vector<ScreenVertex> &vertices, vector<unsigned int> &indices);
     protected:
         void setUpMesh();
 };
@@ -58,7 +56,7 @@ class SimpleMesh : public Mesh{
     public:
         vector<Vertex> vertices;
         vector<unsigned int> indices;
-        SimpleMesh(vector<Vertex> vertices, vector<unsigned int> indeces);
+        SimpleMesh(vector<Vertex> &vertices, vector<unsigned int> &indeces);
     protected:
         void setUpMesh();
 };
@@ -66,7 +64,7 @@ class SimpleMesh : public Mesh{
 class EdgeMesh : public Mesh{
     public:
         vector<EdgeVertex> edgeVertices;
-        EdgeMesh(vector<EdgeVertex> edgeVertices);
+        EdgeMesh(vector<EdgeVertex> &edgeVertices);
     protected:
         void setUpMesh();
 };
@@ -74,7 +72,7 @@ class EdgeMesh : public Mesh{
 class TextureMesh : public Mesh{
     public:
         vector<KeyVertex> keyVertices;
-        TextureMesh(vector<KeyVertex> keyVertices);
+        TextureMesh(vector<KeyVertex> &keyVertices);
     protected:
         void setUpMesh();
 };

@@ -10,7 +10,7 @@
 class Model{
     public:
         Model(string path, int mode);
-        void draw(Shader shader);
+        void draw();
     private:
         int mode;
         vector<Mesh> meshes;
