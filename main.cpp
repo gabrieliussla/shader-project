@@ -22,10 +22,11 @@
 #define TEXTURE "paper_normals"
 
 struct Object{
-    Model *fill;
-    Model *edges;
-    Model *texture;
+    SimpleModel  *fill;
+    EdgeModel    *edges;
+    TextureModel *texture;
     glm::mat4 modelMat;
+    glm::vec3 colour;
 };
 
 //----- Globals -----//
@@ -39,10 +40,12 @@ float deltaTime;
 float lastFrameTime;
 long totalFrames = 0;
 
+glm::vec3 light = glm::vec3(0.0, 8.0, 0.0);
 glm::vec3 cameraPos = glm::vec3(-1.4, 2.9, -2.2);//glm::vec3(4.2, 3.2, 6.2);
 glm::vec3 cameraFront = glm::vec3(0.5, 0.0, 0.8);//glm::vec3(-0.5,0,-0.8);
 glm::vec3 cameraUp = glm::vec3(0.0, 1.0, 0.0);
 float cameraYaw = 2.56;
+int viewChange = 1;
 
 //----- Callback functions -----//
 
@@ -59,10 +62,13 @@ bool processInput(GLFWwindow* window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
-    if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS)
-        cout << ((float)totalFrames/(lastFrameTime-startTime)) << '\n';
+    if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS){
+        if(lastFrameTime-startTime > 1) cout << "FPS: " << ((float)totalFrames/(lastFrameTime-startTime)) << "   Frame Time: " << ((lastFrameTime-startTime)/(float)totalFrames) << '\n';
+        totalFrames = 0;
+        startTime = (float)glfwGetTime();
+    }
 
-    float cameraSpeed = deltaTime * 2;
+    float cameraSpeed = deltaTime * 3;
     float cameraTurnSpeed = deltaTime * 2;
     bool move = false;
     bool turn = false;
@@ -100,12 +106,13 @@ bool processInput(GLFWwindow* window)
 
 //----- Other functions -----//
 
-struct Object *newObject(string name, glm::mat4 model){
+struct Object *newObject(string name, glm::mat4 model, glm::vec3 colour, float density){
     struct Object *obj = new Object;
-    obj->fill = new Model("models/"+name, 0);
-    obj->edges = new Model("models/"+name, 1);
-    obj->texture = new Model("models/"+name, 2);
+    obj->fill = new SimpleModel("models/"+name);
+    obj->edges = new EdgeModel("models/"+name);
+    obj->texture = new TextureModel("models/"+name, density);
     obj->modelMat = model;
+    obj->colour = colour;
     return obj;
 }
 
@@ -121,11 +128,20 @@ glm::vec3 screen(glm::mat4 projection, glm::vec3 vector){
     return glm::vec3(glm::vec2(proj_vector) / glm::abs(proj_vector.w), proj_vector.z);
 }
 
+glm::vec3 genPaperLight(glm::mat4 projection, glm::vec3 light){
+    glm::vec3 paperLight = screen(projection, light);
+    paperLight.z = 3;
+    if(paperLight.x >  2) paperLight.x =  2;
+    if(paperLight.x < -2) paperLight.x = -2;
+    if(paperLight.y >  2) paperLight.y =  2;
+    if(paperLight.y < -2) paperLight.y = -2;
+    return paperLight;
+}
+
 //----- Main Function -----//
 
 int main()
 {
-
     //----- Initialise libraries and view window -----//
 
     // Initialise glfw
@@ -134,7 +150,8 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_SAMPLES, SAMPLES);
-
+    
+    glfwSwapInterval(0.0001);
     // Create a Windows window
     GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "GLTest", NULL, NULL);
     if (window == NULL) {
@@ -159,25 +176,28 @@ int main()
     //----- Set Up -----//
     
     // Compile shaders
-    //Shader shader(("shaders/"+name+".vert").c_str(), ("shaders/"+name+".frag").c_str());
     Shader fill("shaders/fill.vert", "shaders/fill.frag");
     Shader edges("shaders/edge.vert", "shaders/edge.frag");
     Shader textures("shaders/texture.vert", "shaders/texture.frag");
-    Shader image("shaders/image.vert", "shaders/image.frag");
+    Shader image("shaders/image.vert", "shaders/imagefx.frag");
 
     // Set up all models
     std::vector<struct Object *> objects;
-    objects.push_back(newObject("pot.obj", glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.1, 0.0))));
-    objects.push_back(newObject("sphere.obj", glm::translate(glm::mat4(1.0f), glm::vec3(-1.0f, 0.7f, -4.2f))));
-    vector<ScreenVertex> vertices = {
+    //objects.push_back(newObject("body.obj", glm::scale(glm::mat4(1.0f), glm::vec3(0.03)), 0.02));
+    //objects.push_back(newObject("elk.obj", glm::scale(glm::mat4(1.0f), glm::vec3(0.03)), 0.01));
+    objects.push_back(newObject("tree.obj", glm::scale(glm::mat4(1.0f), glm::vec3(1.6)), glm::vec3(0.61,0.54,0.43), 39));
+    //objects.push_back(newObject("tree1.obj", glm::scale(glm::mat4(1.0f), glm::vec3(0.6)), 3));
+    //objects.push_back(newObject("cup.obj", glm::rotate(glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.1, 0.0)), glm::vec3(0.04)), -1.57f, glm::vec3(1, 0, 0)), 0.01));
+    objects.push_back(newObject("sphere.obj", glm::translate(glm::mat4(1.0f), glm::vec3(-1.0f, 0.7f, -4.2f)), glm::vec3(0.9, 0.8, 0.2), 9.0));
+    // Create a mesh for the screen quad
+    vector<ScreenVertex> screenVertices = {
         {glm::vec2(-1.0, 1.0),glm::vec2(0.0,1.0)},
         {glm::vec2( 1.0, 1.0),glm::vec2(1.0,1.0)},
         {glm::vec2(-1.0,-1.0),glm::vec2(0.0,0.0)},
         {glm::vec2( 1.0,-1.0),glm::vec2(1.0,0.0)}};
-    vector<unsigned int> indices  = {0, 1, 2, 1, 3, 2};
-    ScreenMesh screenMesh(vertices, indices);
+    vector<unsigned int> screenIndices  = {0, 1, 2, 1, 3, 2};
+    ScreenMesh screenMesh(screenVertices, screenIndices);
 
-    // DELETE THE FRAMEBUFFER AT THE END
     // Set up the multisampled framebuffer to render to
     unsigned int screenTexMS;
     glGenTextures(1, &screenTexMS);
@@ -221,7 +241,6 @@ int main()
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // POSSIBLY WRITE A FUNCTION FOR LOADING
     // Get brush textures
     int width, height, nrChannels;
     unsigned char *data = stbi_load(("textures/"+std::string(BRUSH)+".png").c_str(), &width, &height, &nrChannels, 0);
@@ -261,72 +280,36 @@ int main()
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
-    ///// MAKE THIS BETTER
     // Set up uniforms
     float ratio = (float)screenWidth/(float)screenHeight;
     glm::mat4 model;
     glm::mat4 view = glm::lookAt(cameraPos, cameraPos+cameraFront, cameraUp);
     glm::mat4 projection = glm::perspective(1.2f, ratio, 0.1f, 100.0f);
-    
-    edges.use();
-    edges.setMat4((char*)"view", view);
-    edges.setVec3((char*)"eye", cameraPos);
-    edges.setVec3((char*)"light", glm::vec3(0.0, 8.0, 0.0));
-    edges.setMat4((char*)"projection", projection);
-    edges.setFloat((char*)"ratio", ratio);
-    
+    glm::vec3 paperLight = genPaperLight(projection*view, light);
+
     fill.use();
-    fill.setMat4((char*)"view", view);
-    fill.setVec3((char*)"light", glm::vec3(0.0, 8.0, 0.0));
-    fill.setMat4((char*)"projection", projection);
-
-    textures.use();
-    textures.setMat4((char*)"view", view);
-    textures.setVec3((char*)"eye", cameraPos);
-    textures.setMat4((char*)"projection", projection);
-
+    fill.setVec3((char*)"light", light);
+    edges.use();
+    edges.setVec3((char*)"light", light);
     image.use();
-    image.setVec3((char*)"light", glm::vec3(0.0, 8.0, 0.0));
+    image.setVec3((char*)"light", light);
     image.setInt((char*)"paper", 1);
 
     //----- Render Loop -----//
     
     startTime = (float)glfwGetTime();
     while (!glfwWindowShouldClose(window)) {
-        ///// MAKE THESE UPDATES BETTER (MINIMIZE SWITCHES)
+        //if camera has moved, update the varialbes
         if (processInput(window)) {
+            viewChange = 1;
             view = glm::lookAt(cameraPos, cameraPos+cameraFront, cameraUp);
-            edges.use();
-            edges.setMat4((char*)"view", view);
-            edges.setVec3((char*)"eye", cameraPos);
-            fill.use();
-            fill.setMat4((char*)"view", view);
-            textures.use();
-            textures.setMat4((char*)"view", view);
-            textures.setVec3((char*)"eye", cameraPos);
-            image.use();
-            glm::vec3 screenLight = screen(projection*view, glm::vec3(0.0, 8.0, 0.0));
-            screenLight.z = 3;
-            if(screenLight.x >  2) screenLight.x =  2;
-            if(screenLight.x < -2) screenLight.x = -2;
-            if(screenLight.y >  2) screenLight.y =  2;
-            if(screenLight.y < -2) screenLight.y = -2;
-            image.setVec3((char*)"flatlight", screenLight);
-            //cout << to_string(projection * view * model * glm::vec4(1.4, 2.4, 0.0, 1.0)) << "\n";
+            paperLight = genPaperLight(projection*view, light);
             //cout << to_string(cameraPos) << "\t" << to_string(cameraFront) << "\n";
         }
+        //if window size has changed, set according properties
         if(screenChange){
             ratio = (float)screenWidth/(float)screenHeight;
             projection = glm::perspective(1.2f, ratio, 0.1f, 100.0f);
-            fill.use();
-            fill.setMat4((char*)"projection", projection);
-            edges.use();
-            edges.setMat4((char*)"projection", projection);
-            edges.setFloat((char*)"ratio", ratio);
-            textures.use();
-            textures.setMat4((char*)"projection", projection);
-            image.use();
-            image.setFloat((char*)"ratio", ratio);
 
             glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, screenTexMS);
             glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, SAMPLES, GL_RGB, screenWidth, screenHeight, GL_TRUE);
@@ -337,62 +320,76 @@ int main()
             glBindRenderbuffer(GL_RENDERBUFFER, rboMS);
             glRenderbufferStorageMultisample(GL_RENDERBUFFER, SAMPLES, GL_DEPTH24_STENCIL8, screenWidth, screenHeight);
             glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-            screenChange = 0;
         }
 
         //changes that depend on time
         float timeValue = (float)glfwGetTime();
         deltaTime = timeValue - lastFrameTime;
         lastFrameTime = timeValue;
-
         float rotationValue = 0;//(sin(timeValue*2 + cos(timeValue*2)) - 1) * 0.4;
         model = glm::mat4(1.0f);
         model = glm::scale(model, glm::vec3(1));
         model = glm::translate(model, glm::vec3(0.0, -0.4, 0.0));
         model = glm::rotate(model, rotationValue, glm::vec3(0.0, 0.0, 1.0));
         model = glm::translate(model, glm::vec3(0.0, 0.5, 0.0));
-
         //shaders.setVec3((char*)"light", glm::vec3(5*sin(timeValue), 5.0, 5*cos(timeValue)));
 
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        glBindFramebuffer(GL_FRAMEBUFFER, framebufferMS);
 
-        //draw the fill
+        glBindFramebuffer(GL_FRAMEBUFFER, framebufferMS);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+        // Draw the fill
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_STENCIL_TEST);
         glStencilMask(0xFF);
         glStencilFunc(GL_ALWAYS, 1, 0xFF);
         glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
         fill.use();
+        if(viewChange)
+            fill.setMat4((char*)"view", view);
+        if(screenChange)
+            fill.setMat4((char*)"projection", projection);
         for(int i=0; i<objects.size(); i++){
             fill.setMat4((char*)"model", objects[i]->modelMat);
+            fill.setVec3((char*)"shade", objects[i]->colour);
             glStencilFunc(GL_ALWAYS, i+1, 0xFF);
             objects[i]->fill->draw();
         }
         
-        //draw the edges
+        // Draw the edges
         glStencilOp(GL_KEEP, GL_KEEP, GL_ZERO);
         edges.use();
+        if(viewChange){
+            edges.setMat4((char*)"view", view);
+            edges.setVec3((char*)"eye", cameraPos);}
+        if(screenChange){
+            edges.setMat4((char*)"projection", projection);
+            edges.setFloat((char*)"ratio", ratio);}
         for(int i=0; i<objects.size(); i++){
             edges.setMat4((char*)"model", objects[i]->modelMat);
             objects[i]->edges->draw();
         }
 
-        //draw the texture
+        // Draw the texture
         glDisable(GL_DEPTH_TEST);
         glStencilFunc(GL_EQUAL, 1, 0xFF);
         glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, brush);
         textures.use();
+        if(viewChange){
+            textures.setMat4((char*)"view", view);
+            textures.setVec3((char*)"eye", cameraPos);}
+        if(screenChange)
+            textures.setMat4((char*)"projection", projection);
         for(int i=0; i<objects.size(); i++){
             textures.setMat4((char*)"model", objects[i]->modelMat);
             glStencilFunc(GL_EQUAL, i+1, 0xFF);
             objects[i]->texture->draw();
         }
        
-        // Blit to the non-multisample buffer so it can be displayed
+        // Draw effects
+        //blit to the non-multisample buffer so it can be displayed
         glBindFramebuffer(GL_READ_FRAMEBUFFER, framebufferMS);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer);
         glDrawBuffer(GL_BACK);
@@ -400,21 +397,28 @@ int main()
 
         //draw quad to screen
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glClear(GL_COLOR_BUFFER_BIT);
         glBindTexture(GL_TEXTURE_2D, screenTex);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture);
-
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_STENCIL_TEST);
         image.use();
+        if(viewChange){
+            image.setVec3((char*)"flatlight", paperLight);
+            viewChange=0;}
+        if(screenChange){
+            image.setFloat((char*)"ratio", ratio);
+            screenChange=0;}
         screenMesh.draw();
 
+        //finish frame
         glfwSwapBuffers(window);
         glfwPollEvents();
         totalFrames ++;
     }
 
+    glDeleteBuffers(1, &framebuffer);
+    glDeleteBuffers(1, &framebufferMS);
     glfwTerminate();
     return 0;
 }

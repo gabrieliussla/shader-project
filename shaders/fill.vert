@@ -10,6 +10,7 @@ uniform mat4 view;
 uniform mat4 projection;
 
 uniform vec3 light;
+uniform vec3 shade;
 
 void main()
 {
@@ -17,5 +18,5 @@ void main()
 
     vec4 globalNormal = model * vec4(vNormal, 0.0);
     colour = vec3(0.8, 0.8, dot(normalize(globalNormal).xyz, normalize(light)));
-    colour = vec3(0.3, 0.9, 0.8);
+    colour = shade;
 }

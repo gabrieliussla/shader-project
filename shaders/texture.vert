@@ -44,5 +44,5 @@ void main()
     gl_Position = pos;
     vec3 toPoint = eye-(globalPos.xyz/globalPos.w);
     float distanceFactor = FAR_VAL / (FAR_VAL + length(toPoint));
-    colour = vec4(0.0,0.0,0.0/*lightness, lightness, lightness*/, STRENGTH*distanceFactor*dot(normalize(toPoint), normal));
+    colour = vec4(0.0,0.0,0.0/*lightness, lightness, lightness*/, STRENGTH*distanceFactor*dot(normalize(toPoint), normalize(globalNormal.xyz)));
 }

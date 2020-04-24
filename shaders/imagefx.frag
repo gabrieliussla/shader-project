@@ -1,6 +1,6 @@
 #version 330 core
 
-#define WOBBLE 0.02
+#define WOBBLE 0.01
 
 out vec4 fragColour;
 

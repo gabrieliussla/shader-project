@@ -5,8 +5,9 @@
 #ignore the executable
 /run
 
-#ignore all files in 'other'
+#ignore all files in 'other' and 'models'
 /other/*
+/models/*
 
 #don't ignore 'writeup.tex'
 !/other/writeup

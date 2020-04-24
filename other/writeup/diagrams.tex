@@ -5,8 +5,8 @@
 \usetikzlibrary{calc}
 
 \begin{document}
-
-
+\iffalse
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{figure}[h]
 \centering
@@ -60,7 +60,7 @@
 \end{tikzpicture}
 \end{figure}
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{figure}[h]
 \centering
@@ -107,27 +107,77 @@
 \end{tikzpicture}
 \end{figure}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\fi
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}
 
+\def\size{0.06}
+
+\coordinate (A) at ( 0.0, 0.0);
+\coordinate (B) at ( 0.4, 0.8);
+\coordinate (C) at (-1.5,-0.2);
+\coordinate (D) at ( 1.9,-0.4);
+\coordinate (NV)  at (-0.2, 0.68);
+\coordinate (NV') at ( 0.1, 0.7);
+\coordinate (NA)  at (-0.35, 0.62);
+\coordinate (NB)  at ( 0.45, 0.55);
+
+\fill[color=black!8!white] (A) -- (C) -- (B) -- (D);
+\fill[color=black] (A) circle (\size); \fill[color=black] (B) circle (\size); \fill[color=black] (C) circle (\size); \fill[color=black] (D) circle (\size);
+
+\draw[thick] (A) node[anchor=80]{$v$} -- (B) node[anchor=-160]{$v'$} -- (C) -- (A) -- (D) -- (B);
+\draw[thick,->] (A) -- ($(A)+(NV)$) node[pos=1.3]{$n$};
+\draw[thick,->] (B) -- ($(B)+(NV')$);%node[anchor=-110]{$n_B$};
+\draw[thick,->] ($0.38*(B)+0.62*(C)-0.2*(NA)$) -- ($0.38*(B)+0.62*(C)+0.8*(NA)$) node[pos=1.3]{$n_A$};
+\draw[thick,->] ($0.38*(B)+0.62*(D)-0.2*(NB)$) -- ($0.38*(B)+0.62*(D)+0.8*(NB)$) node[pos=1.3]{$n_B$};
+
+\node at ($1/3*(A)+1/3*(B)+1/3*(C)$) {$A$};
+\node at ($1/3*(A)+1/3*(B)+1/3*(D)$) {$B$};
+
+\end{tikzpicture}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}
 
-\pgfmathsetmacro{\square}{0.6}
-\pgfmathsetmacro{\cut}{0.7}
-\def\cx{-0.25}\def\cy{0.25}
-\coordinate (C) at (\cx,\cy);
+\pgfmathsetmacro{\arrowlen}{0.8}
+\pgfmathsetmacro{\right}{0.2}
+\pgfmathsetmacro{\eyeX}{-3.1}
+\pgfmathsetmacro{\eyeY}{-0.7}
 
-\draw[thick] (0,0) circle (1.3);
-\draw[thick] ($(C)+(\square-\cut,-\square)$) -- ($(C)+(-\square,-\square)$) -- ($(C)+(-\square,\square)$) -- ($(C)+(\square,\square)$) -- ($(C)+(\square,-\square+\cut)$);
+\def\len{sqrt(\eyeX*\eyeX+\eyeY*\eyeY)}
+\coordinate (E) at (\eyeX, \eyeY);
+\coordinate (OE) at ({\eyeX/\len},{\eyeY/\len});
+\coordinate (OP) at ({\eyeY/\len}, {-\eyeX/\len});
 
-\tkzDefPoint(\square-\cut+\cx,-\square+\cy){A1}\tkzDefPoint(\cx,\cy){A2}\tkzDefPoint(\square+\cx,-\square+\cut+\cy){A3}
-\tkzCircumCenter(A1,A2,A3)\tkzGetPoint{AC}
-\tkzDrawArc[thick,color=black](AC,A3)(A1)
+\draw[thick,dotted] (E) -- (0,0);
+\draw[thick,->] (0,0) -- ($\arrowlen*(OP)$);
+\draw[thick] ($\right*(OE)$) -- ($\right*(OE)+\right*(OP)$) -- ($\right*(OP)$);
+%\draw[thick] plot[smooth cycle,tension=0.7] coordinates {(0,0) (0.9,-0.3) (1.1,-1.3) (0.4,-2) (-0.5,-2.1) (-0.9,-1.8) (-0.5,-1.2) (-0.6,-0.5)};
+\fill[color=black!8!white] plot[smooth cycle,tension=0.7] coordinates {(0,0) (0.63,-0.21) (0.77,-0.91) (0.28,-1.4) (-0.35,-1.47) (-0.63,-1.26) (-0.35,-0.84) (-0.42,-0.35)};
+\draw[thick] plot[smooth cycle,tension=0.7] coordinates {(0,0) (0.63,-0.21) (0.77,-0.91) (0.28,-1.4) (-0.35,-1.47) (-0.63,-1.26) (-0.35,-0.84) (-0.42,-0.35)};
+
+\pgfmathsetmacro{\eye}{0.37}
+\pgfmathsetmacro{\width}{22}
+\def\angle{atan(\eyeY/\eyeX)}
+
+\coordinate (B) at ($(E)+\eye*(OE)$);
+\coordinate (L) at ({cos(\angle-\width)},{sin(\angle-\width)});
+\coordinate (U) at ({cos(\angle+\width)},{sin(\angle+\width)});
+
+\draw[thick] ($(B)+1.2*\eye*(L)$) -- (B) -- ($(B)+1.2*\eye*(U)$) node[anchor=-90]{$eye$};
+\draw[thick] (E) arc (\angle:\angle+\width:\eye);
+\draw[thick] (E) arc (\angle:\angle-\width:\eye);
+\fill[color=black] ($(E)+0.05*(OE)$) circle (0.07);
 
 \end{tikzpicture}
 \end{figure}
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \end{document}

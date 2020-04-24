@@ -14,7 +14,6 @@
 #include <unordered_map>
 #include <tuple>
 
-#define DENSITY 9
 #define COLOUR_POW 2
 
 struct edge_hash{
@@ -28,7 +27,25 @@ glm::vec3 to_vec3(aiMesh *mesh, aiVector3D v){
     return vector;
 }
 
-Model::Model(string path, int mode){
+SimpleModel::SimpleModel(string path){
+    processScene(path);
+}
+
+EdgeModel::EdgeModel(string path){
+    processScene(path);
+}
+
+TextureModel::TextureModel(string path, float density){
+    this->density = density;
+    processScene(path);
+}
+
+void Model::draw(){
+    for(Mesh mesh : meshes)
+        mesh.draw();
+}
+
+void Model::processScene(string path){
     // Load model using assimp
     Assimp::Importer importer;
     const aiScene *scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
@@ -38,16 +55,7 @@ Model::Model(string path, int mode){
     }
     dir = path.substr(0, path.find_last_of('/'));
 
-    this->mode = mode;
-    processScene(scene, mode);
-}
-
-void Model::draw(){
-    for(Mesh mesh : meshes)
-        mesh.draw();
-}
-
-void Model::processScene(const aiScene *scene, int mode){
+    // Process every mesh
     aiNode *rootNode = scene->mRootNode;
     vector<aiNode*> stack;
     aiNode *node;
@@ -57,11 +65,7 @@ void Model::processScene(const aiScene *scene, int mode){
         stack.pop_back();
         for(int i=0; i<node->mNumMeshes; i++){
             aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
-            switch(mode){
-                case  0: processSimpleMesh(mesh, scene);   break;
-                case  1: processEdgeMesh(mesh, scene);     break;
-                case  2: processTextureMesh(mesh, scene);  break;
-            } 
+            processMesh(mesh, scene);
         }
         for(int i=0; i<node->mNumChildren; i++){
             stack.push_back(node->mChildren[i]);
@@ -69,7 +73,11 @@ void Model::processScene(const aiScene *scene, int mode){
     }
 }
 
-void Model::processSimpleMesh(aiMesh *mesh, const aiScene *scene){
+void Model::processMesh(aiMesh *mesh, const aiScene *scene){
+    cout << "Model set-up unimplemented\n";
+}
+
+void SimpleModel::processMesh(aiMesh *mesh, const aiScene *scene){
     vector<Vertex> vertices;
     vector<unsigned int> indices;
     for(int i=0; i<mesh->mNumVertices; i++){
@@ -91,7 +99,7 @@ void Model::processSimpleMesh(aiMesh *mesh, const aiScene *scene){
     meshes.push_back(SimpleMesh(vertices, indices));
 }
 
-void Model::processEdgeMesh(aiMesh *mesh, const aiScene *scene){
+void EdgeModel::processMesh(aiMesh *mesh, const aiScene *scene){
     vector<EdgeVertex> edgeVertices;
     unordered_map<tuple<glm::vec3, glm::vec3>, glm::vec3, edge_hash> edgeMap;   // to store face normal
     unordered_map<glm::vec3, glm::vec3> vertexMap;                              // to store vertex normal
@@ -168,11 +176,13 @@ void Model::processEdgeMesh(aiMesh *mesh, const aiScene *scene){
     for(EdgeVertex& edgev : edgeVertices)
         edgev.nv = glm::normalize(vertexMap[edgev.v]);
 
-    //cout << "total vertices: " << mesh->mNumVertices << "\nunique vertices: " << vertexMap.size() << "\nedge vertices: " << edgeVertices.size() << "\nunprocessed edges: " << edgeMap.size() << "\n";
+    cout << "total vertices: " << mesh->mNumVertices << "\nunique vertices: " << vertexMap.size() << "\nedge vertices: " << edgeVertices.size() << "\nunprocessed edges: " << edgeMap.size() << "\n";
     meshes.push_back(EdgeMesh(edgeVertices));
+    cout << "done push!\n";
 }
 
-void Model::processTextureMesh(aiMesh *mesh, const aiScene *scene){
+void TextureModel::processMesh(aiMesh *mesh, const aiScene *scene){
+    cout << "started tex\n";
     vector<KeyVertex> keyVertices;
     glm::vec3 c1, c2, c3, myNormal;
     float area;
@@ -189,10 +199,11 @@ void Model::processTextureMesh(aiMesh *mesh, const aiScene *scene){
         area = glm::length(glm::cross(c2-c1, c3-c1));
 
         // calculate how many points should be generated on this triangle
-        count = glm::floor(area*DENSITY);
-        if(rand() % 1000 < (int)(fmod(area*DENSITY, 1)*1000))
+        count = glm::floor(area*density);
+        if(rand() % 1000 < (int)(fmod(area*density, 1)*1000))
             count++;
-
+        //cout << i << " " << count << "\n";
+        
         // generate the points
         float rand1, rand2;
         KeyVertex keyv;
@@ -220,4 +231,5 @@ void Model::processTextureMesh(aiMesh *mesh, const aiScene *scene){
             pointCount++;
         }
     }
+    cout << "Done tex!\n";
 }

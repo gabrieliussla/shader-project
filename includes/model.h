@@ -4,21 +4,42 @@
 #include "shader.h"
 #include "mesh.h"
 
+#include <glm/glm.hpp>
 #include <assimp/scene.h>
 #include <string>
 
 class Model{
     public:
-        Model(string path, int mode);
         void draw();
-    private:
-        int mode;
+    protected:
         vector<Mesh> meshes;
         string dir;
-        void processScene(const aiScene *scene, int mode);
-        void processSimpleMesh(aiMesh *mesh, const aiScene *scene);
-        void processEdgeMesh(aiMesh *mesh, const aiScene *scene);
-        void processTextureMesh(aiMesh *mesh, const aiScene *scene);
+        void processScene(string path);
+        virtual void processMesh(aiMesh *mesh, const aiScene *scene);
+};
+
+class SimpleModel : public Model{
+    public:
+        SimpleModel(string path);
+    protected:
+        virtual void processMesh(aiMesh *mesh, const aiScene *scene);
+};
+
+class EdgeModel : public Model{
+    public:
+        EdgeModel(string path);
+    protected:
+        virtual void processMesh(aiMesh *mesh, const aiScene *scene);
+
+};
+
+class TextureModel : public Model{
+    public:
+        float density;
+        TextureModel(string path, float density);
+    protected:
+        virtual void processMesh(aiMesh *mesh, const aiScene *scene);
+
 };
 
 #endif
