@@ -179,13 +179,14 @@ int main()
     Shader fill("shaders/fill.vert", "shaders/fill.frag");
     Shader edges("shaders/edge.vert", "shaders/edge.frag");
     Shader textures("shaders/texture.vert", "shaders/texture.frag");
-    Shader image("shaders/image.vert", "shaders/imagefx.frag");
+    Shader image("shaders/image.vert", "shaders/image.frag");
 
     // Set up all models
     std::vector<struct Object *> objects;
-    //objects.push_back(newObject("body.obj", glm::scale(glm::mat4(1.0f), glm::vec3(0.03)), 0.02));
+    //objects.push_back(newObject("body.obj", glm::scale(glm::mat4(1.0f), glm::vec3(0.03)), glm::vec3(0.5,0.5,0.5), 0.02));
+    //objects.push_back(newObject("car.obj", glm::scale(glm::mat4(1.0f), glm::vec3(1)), glm::vec3(0.5,0.5,0.5), 9));
     //objects.push_back(newObject("elk.obj", glm::scale(glm::mat4(1.0f), glm::vec3(0.03)), 0.01));
-    objects.push_back(newObject("tree.obj", glm::scale(glm::mat4(1.0f), glm::vec3(1.6)), glm::vec3(0.61,0.54,0.43), 39));
+    //objects.push_back(newObject("tree.obj", glm::scale(glm::mat4(1.0f), glm::vec3(1.6)), glm::vec3(0.61,0.54,0.43), 39));
     //objects.push_back(newObject("tree1.obj", glm::scale(glm::mat4(1.0f), glm::vec3(0.6)), 3));
     //objects.push_back(newObject("cup.obj", glm::rotate(glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.1, 0.0)), glm::vec3(0.04)), -1.57f, glm::vec3(1, 0, 0)), 0.01));
     objects.push_back(newObject("sphere.obj", glm::translate(glm::mat4(1.0f), glm::vec3(-1.0f, 0.7f, -4.2f)), glm::vec3(0.9, 0.8, 0.2), 9.0));

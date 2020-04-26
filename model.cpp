@@ -176,13 +176,11 @@ void EdgeModel::processMesh(aiMesh *mesh, const aiScene *scene){
     for(EdgeVertex& edgev : edgeVertices)
         edgev.nv = glm::normalize(vertexMap[edgev.v]);
 
-    cout << "total vertices: " << mesh->mNumVertices << "\nunique vertices: " << vertexMap.size() << "\nedge vertices: " << edgeVertices.size() << "\nunprocessed edges: " << edgeMap.size() << "\n";
+    //cout << "total vertices: " << mesh->mNumVertices << "\nunique vertices: " << vertexMap.size() << "\nedge vertices: " << edgeVertices.size() << "\nunprocessed edges: " << edgeMap.size() << "\n";
     meshes.push_back(EdgeMesh(edgeVertices));
-    cout << "done push!\n";
 }
 
 void TextureModel::processMesh(aiMesh *mesh, const aiScene *scene){
-    cout << "started tex\n";
     vector<KeyVertex> keyVertices;
     glm::vec3 c1, c2, c3, myNormal;
     float area;
@@ -231,5 +229,5 @@ void TextureModel::processMesh(aiMesh *mesh, const aiScene *scene){
             pointCount++;
         }
     }
-    cout << "Done tex!\n";
+    //cout << "points: " << pointCount << '\n';
 }

@@ -91,14 +91,12 @@ void SimpleMesh::setUpMesh(){
 
 void EdgeMesh::setUpMesh(){
     //construct index array
-    cout << "Setting up the mesh!!\n";
     vector<unsigned int> indices;
     indices.reserve(length);
     for(unsigned int i=0; i<edgeVertices.size(); i+=6){
         unsigned int edge[12] = {i, i+2, i+3, i, i+3, i+1, i, i+4, i+2, i+1, i+3, i+5};
         indices.insert(indices.end(), begin(edge), end(edge));
     }
-    cout << "Done index construction\n";
 
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
