@@ -46,7 +46,7 @@ void main()
     float distanceFactor = FAR_VAL / (FAR_VAL + length(toPoint));
     float vis = STRENGTH*distanceFactor*dot(normalize(toPoint), normalize(globalNormal.xyz));
     if(vis>0)
-        colour = vec4(0.0,0.0,0.0, vis);
+        colour = vec4(0,0,0, vis);
     else
-        gl_Position = vec4(0.0, 0.0, 1.0, 1.0);
+        gl_Position = vec4(0.0, 0.1, 0.2, 0.0);
 }

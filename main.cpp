@@ -31,20 +31,21 @@ struct Object{
 
 //----- Globals -----//
 
-int screenWidth = 600;
-int screenHeight = 600;
+int screenWidth = 1000;
+int screenHeight = 1000;
 int screenChange = 1;
 
 float startTime;
 float deltaTime;
 float lastFrameTime;
 long totalFrames = 0;
-
+	
 glm::vec3 light = glm::vec3(0.0, 8.0, 0.0);
-glm::vec3 cameraPos = glm::vec3(-1.4, 2.9, -2.2);//glm::vec3(4.2, 3.2, 6.2);
-glm::vec3 cameraFront = glm::vec3(0.5, 0.0, 0.8);//glm::vec3(-0.5,0,-0.8);
+glm::vec3 cameraPos = glm::vec3(1.8, 4.5, 4.8);
+glm::vec3 cameraFront = glm::vec3(-0.2, -0.5, -0.8);
 glm::vec3 cameraUp = glm::vec3(0.0, 1.0, 0.0);
 float cameraYaw = 2.56;
+float cameraPitch = 0;
 int viewChange = 1;
 
 //----- Callback functions -----//
@@ -70,6 +71,7 @@ bool processInput(GLFWwindow* window)
 
     float cameraSpeed = deltaTime * 3;
     float cameraTurnSpeed = deltaTime * 2;
+    float cameraTiltSpeed = deltaTime * 2;
     bool move = false;
     bool turn = false;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
@@ -96,11 +98,19 @@ bool processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
         cameraYaw += cameraTurnSpeed; turn = true;
     }
+    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+        cameraPitch += cameraTiltSpeed; turn = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
+        cameraPitch -= cameraTiltSpeed; turn = true;
+    }
 
     if (turn) {
-        cameraFront.x = sin(cameraYaw);
-        cameraFront.z = -cos(cameraYaw);
+        cameraFront.x = cos(cameraPitch)*sin(cameraYaw);
+        cameraFront.z = cos(cameraPitch)*-cos(cameraYaw);
+        cameraFront.y = sin(cameraPitch);
     }
+    
     return move || turn;
 }
 
@@ -121,6 +131,14 @@ void deleteObject(struct Object *obj){
     delete obj->edges;
     delete obj->texture;
     delete obj;
+}
+
+glm::mat4 transform(float scale = 1, glm::vec3 translate = glm::vec3(0,0,0), float rotVal = 0, glm::vec3 rotAxis = glm::vec3(1,0,0)){
+    glm::mat4 matrix = glm::mat4(1);
+    matrix = glm::scale(matrix, glm::vec3(scale));
+    matrix = glm::translate(matrix, translate);
+    matrix = glm::rotate(matrix, rotVal, rotAxis);
+    return matrix;
 }
 
 glm::vec3 screen(glm::mat4 projection, glm::vec3 vector){
@@ -179,17 +197,19 @@ int main()
     Shader fill("shaders/fill.vert", "shaders/fill.frag");
     Shader edges("shaders/edge.vert", "shaders/edge.frag");
     Shader textures("shaders/texture.vert", "shaders/texture.frag");
-    Shader image("shaders/image.vert", "shaders/image.frag");
+    Shader image("shaders/image.vert", "shaders/imagefx.frag");
 
     // Set up all models
     std::vector<struct Object *> objects;
-    //objects.push_back(newObject("body.obj", glm::scale(glm::mat4(1.0f), glm::vec3(0.03)), glm::vec3(0.5,0.5,0.5), 0.02));
-    //objects.push_back(newObject("car.obj", glm::scale(glm::mat4(1.0f), glm::vec3(1)), glm::vec3(0.5,0.5,0.5), 9));
-    //objects.push_back(newObject("elk.obj", glm::scale(glm::mat4(1.0f), glm::vec3(0.03)), 0.01));
-    //objects.push_back(newObject("tree.obj", glm::scale(glm::mat4(1.0f), glm::vec3(1.6)), glm::vec3(0.61,0.54,0.43), 39));
-    //objects.push_back(newObject("tree1.obj", glm::scale(glm::mat4(1.0f), glm::vec3(0.6)), 3));
-    //objects.push_back(newObject("cup.obj", glm::rotate(glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.1, 0.0)), glm::vec3(0.04)), -1.57f, glm::vec3(1, 0, 0)), 0.01));
-    objects.push_back(newObject("sphere.obj", glm::translate(glm::mat4(1.0f), glm::vec3(-1.0f, 0.7f, -4.2f)), glm::vec3(0.9, 0.8, 0.2), 9.0));
+    //objects.push_back(newObject("body.obj",   transform(0.03), glm::vec3(0.5,0.5,0.5), 0.02));
+    //objects.push_back(newObject("car.obj",    transform(2.3), glm::vec3(0.9,0.3,0.3), 9));
+    //objects.push_back(newObject("elk.obj",    transform(0.02), glm::vec3(0.7,0.5,0.3), 0.01));
+    //objects.push_back(newObject("tree.obj",   transform(1.6), glm::vec3(0.61,0.54,0.43), 39));
+    //objects.push_back(newObject("tree1.obj",  transform(0.6), glm::vec3(0.6,0.5,0.4), 3));
+    //objects.push_back(newObject("cup.obj",    transform(0.03, glm::vec3(0,0,0), -1.57, glm::vec3(1,0,0)), glm::vec3(0.7,0.7,0.7), 0.01));
+    //objects.push_back(newObject("sphere1.obj", transform(1), glm::vec3(0.6, 0.3, 0.3), 5.0));
+    //objects.push_back(newObject("coin.obj",   transform(0.3), glm::vec3(0.9, 0.8, 0.2), 9.0));
+    objects.push_back(newObject("pot.obj",    transform(), glm::vec3(0.65,0.8,0.85), 9.0));
     // Create a mesh for the screen quad
     vector<ScreenVertex> screenVertices = {
         {glm::vec2(-1.0, 1.0),glm::vec2(0.0,1.0)},
@@ -305,7 +325,7 @@ int main()
             viewChange = 1;
             view = glm::lookAt(cameraPos, cameraPos+cameraFront, cameraUp);
             paperLight = genPaperLight(projection*view, light);
-            //cout << to_string(cameraPos) << "\t" << to_string(cameraFront) << "\n";
+            cout << to_string(cameraPos) << "\t" << to_string(cameraFront) << "\n";
         }
         //if window size has changed, set according properties
         if(screenChange){
@@ -343,11 +363,11 @@ int main()
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_STENCIL_TEST);
         glStencilMask(0xFF);
-        glStencilFunc(GL_ALWAYS, 1, 0xFF);
         glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
         fill.use();
-        if(viewChange)
+        if(viewChange){
             fill.setMat4((char*)"view", view);
+            fill.setVec3((char*)"eye", cameraPos);}
         if(screenChange)
             fill.setMat4((char*)"projection", projection);
         for(int i=0; i<objects.size(); i++){
@@ -359,6 +379,7 @@ int main()
         
         // Draw the edges
         glStencilOp(GL_KEEP, GL_KEEP, GL_ZERO);
+        //glStencilFunc(GL_EQUAL, 0, 0xFF);
         edges.use();
         if(viewChange){
             edges.setMat4((char*)"view", view);
@@ -373,7 +394,7 @@ int main()
 
         // Draw the texture
         glDisable(GL_DEPTH_TEST);
-        glStencilFunc(GL_EQUAL, 1, 0xFF);
+        //glDisable(GL_STENCIL_TEST);
         glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, brush);
