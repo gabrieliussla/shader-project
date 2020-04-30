@@ -18,8 +18,8 @@
 #include "mesh.h"
 
 #define SAMPLES 4
-#define BRUSH "splat"
-#define TEXTURE "paper_normals"
+#define BRUSH "splat.png"
+#define TEXTURE "paper_normals.jpg"
 
 struct Object{
     SimpleModel  *fill;
@@ -39,13 +39,13 @@ float startTime;
 float deltaTime;
 float lastFrameTime;
 long totalFrames = 0;
-	
-glm::vec3 light = glm::vec3(0.0, 8.0, 0.0);
-glm::vec3 cameraPos = glm::vec3(1.8, 4.5, 4.8);
-glm::vec3 cameraFront = glm::vec3(-0.2, -0.5, -0.8);
+			
+glm::vec3 light = glm::vec3(7, 12, 9);
+glm::vec3 cameraPos = glm::vec3(0, 1.6, 1.8);
+glm::vec3 cameraFront = glm::vec3(0, -0.7, -0.7);
 glm::vec3 cameraUp = glm::vec3(0.0, 1.0, 0.0);
-float cameraYaw = 2.56;
-float cameraPitch = 0;
+float cameraYaw = 0;
+float cameraPitch = -0.7;
 int viewChange = 1;
 
 //----- Callback functions -----//
@@ -64,9 +64,11 @@ bool processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
     if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS){
-        if(lastFrameTime-startTime > 1) cout << "FPS: " << ((float)totalFrames/(lastFrameTime-startTime)) << "   Frame Time: " << ((lastFrameTime-startTime)/(float)totalFrames) << '\n';
-        totalFrames = 0;
-        startTime = (float)glfwGetTime();
+        if(lastFrameTime-startTime > 0.5){
+            cout << "FPS: " << ((float)totalFrames/(lastFrameTime-startTime)) << "   Frame Time: " << ((lastFrameTime-startTime)/(float)totalFrames) << '\n';
+            totalFrames = 0;
+            startTime = (float)glfwGetTime();
+        }
     }
 
     float cameraSpeed = deltaTime * 3;
@@ -136,8 +138,8 @@ void deleteObject(struct Object *obj){
 glm::mat4 transform(float scale = 1, glm::vec3 translate = glm::vec3(0,0,0), float rotVal = 0, glm::vec3 rotAxis = glm::vec3(1,0,0)){
     glm::mat4 matrix = glm::mat4(1);
     matrix = glm::scale(matrix, glm::vec3(scale));
-    matrix = glm::translate(matrix, translate);
     matrix = glm::rotate(matrix, rotVal, rotAxis);
+    matrix = glm::translate(matrix, translate);
     return matrix;
 }
 
@@ -203,13 +205,19 @@ int main()
     std::vector<struct Object *> objects;
     //objects.push_back(newObject("body.obj",   transform(0.03), glm::vec3(0.5,0.5,0.5), 0.02));
     //objects.push_back(newObject("car.obj",    transform(2.3), glm::vec3(0.9,0.3,0.3), 9));
-    //objects.push_back(newObject("elk.obj",    transform(0.02), glm::vec3(0.7,0.5,0.3), 0.01));
-    //objects.push_back(newObject("tree.obj",   transform(1.6), glm::vec3(0.61,0.54,0.43), 39));
+    //objects.push_back(newObject("elk.obj",    transform(0.025, glm::vec3(70,0,-70), 0.7,glm::vec3(0,1,0)), glm::vec3(0.7,0.5,0.3), 0.006));
+    objects.push_back(newObject("tree.obj",   transform(1.6), glm::vec3(0.81,0.64,0.53), 50));
     //objects.push_back(newObject("tree1.obj",  transform(0.6), glm::vec3(0.6,0.5,0.4), 3));
-    //objects.push_back(newObject("cup.obj",    transform(0.03, glm::vec3(0,0,0), -1.57, glm::vec3(1,0,0)), glm::vec3(0.7,0.7,0.7), 0.01));
-    //objects.push_back(newObject("sphere1.obj", transform(1), glm::vec3(0.6, 0.3, 0.3), 5.0));
-    //objects.push_back(newObject("coin.obj",   transform(0.3), glm::vec3(0.9, 0.8, 0.2), 9.0));
-    objects.push_back(newObject("pot.obj",    transform(), glm::vec3(0.65,0.8,0.85), 9.0));
+    //objects.push_back(newObject("pot.obj",    transform(), glm::vec3(0.92,0.92,0.92)/*glm::vec3(0.65,0.8,0.85)*/, 9.0));
+    //objects.push_back(newObject("cup.obj",    transform(0.03, glm::vec3(0,0,0), -1.57, glm::vec3(1,0,0)), glm::vec3(0.92,0.92,0.92), 0.01));
+    //objects.push_back(newObject("sphere1.obj",transform(1), glm::vec3(0.6,0.3,0.3), 5.0));
+    //objects.push_back(newObject("coin.obj",   transform(0.3), glm::vec3(0.9,0.8,0.2), 9.0));
+    //objects.push_back(newObject("torus1.obj", transform(), glm::vec3(1,1,1), 9.0));
+    //objects.push_back(newObject("apples.obj", transform(0.01), glm::vec3(0.8,0.3,0.2), 0.003));
+    //objects.push_back(newObject("orange.obj", transform(0.4, glm::vec3(1.1,0.9,1.9)), glm::vec3(0.9,0.6,0.3), 2.5));
+    //objects.push_back(newObject("banana.obj", transform(0.45, glm::vec3(6.1,0.3,-1.7), -1.1, glm::vec3(0,1,0)), glm::vec3(0.8,0.8,0.3), 2.5));
+    //objects.push_back(newObject("bowl.obj",   transform(0.39, glm::vec3(0.3,-2.2,-0.5)), glm::vec3(0.8,0.5,0.3), 4));
+
     // Create a mesh for the screen quad
     vector<ScreenVertex> screenVertices = {
         {glm::vec2(-1.0, 1.0),glm::vec2(0.0,1.0)},
@@ -264,7 +272,7 @@ int main()
 
     // Get brush textures
     int width, height, nrChannels;
-    unsigned char *data = stbi_load(("textures/"+std::string(BRUSH)+".png").c_str(), &width, &height, &nrChannels, 0);
+    unsigned char *data = stbi_load(("textures/"+std::string(BRUSH)).c_str(), &width, &height, &nrChannels, 0);
     if(!data){
         std::cout << "Loading brush texture failed!\n";
         return -1;
@@ -279,7 +287,7 @@ int main()
     stbi_image_free(data);
 
     // Load paper texture
-    data = stbi_load(("textures/"+std::string(TEXTURE)+".jpg").c_str(), &width, &height, &nrChannels, 0);
+    data = stbi_load(("textures/"+std::string(TEXTURE)).c_str(), &width, &height, &nrChannels, 0);
     if(!data){
         std::cout << "Loading texture failed!\n";
         return -1;
@@ -305,8 +313,8 @@ int main()
     float ratio = (float)screenWidth/(float)screenHeight;
     glm::mat4 model;
     glm::mat4 view = glm::lookAt(cameraPos, cameraPos+cameraFront, cameraUp);
-    glm::mat4 projection = glm::perspective(1.2f, ratio, 0.1f, 100.0f);
-    glm::vec3 paperLight = genPaperLight(projection*view, light);
+    glm::mat4 projection;
+    glm::vec3 paperLight;
 
     fill.use();
     fill.setVec3((char*)"light", light);

@@ -19,5 +19,5 @@ void main(){
     vec3 toLight = normalize(lightPos - vec3(texCoord, 0.0));
     vec3 paperNormal = texture(paper, imageCoord/2).xyz - 0.5;
 
-    fragColour = colour;//vec4((0.3+dot(paperNormal, toLight)) * colour.xyz, 1.0);
+    fragColour = vec4((0.3+dot(paperNormal, toLight)) * colour.xyz, 1.0);
 }

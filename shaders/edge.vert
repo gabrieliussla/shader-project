@@ -1,7 +1,7 @@
 #version 330 core
 
-#define SCALE 0.05
-#define REDUCE -0.01
+#define SCALE 0.12
+#define REDUCE 0.08
 
 layout (location = 0) in vec3 v;
 layout (location = 1) in vec3 v2;
@@ -91,7 +91,7 @@ void main()
             colour = vec4(0.0, 1.0, 1.0, 1.0); break;
     }
     //colour = vec4(0.3, 0.3, 0.3, 1.0);
-
+    //gl_Position.z += 0.05;
     if(dot(gnA,vec4(eye, 1.0)-gv) < 0 == dot(gnB,vec4(eye, 1.0)-gv) < 0 && dot(normalize(nA), normalize(nB)) > -0.2)
         //colour = vec4(1.0, 0.0, (dot(nA,nB)+2)/4, 1.0);
         gl_Position = vec4(0.0, 0.0, 0.0, 0.0);

@@ -1,7 +1,7 @@
 #version 330 core
 
-#define TEX_SIZE 0.7
-#define STRENGTH 0.1
+#define TEX_SIZE 1.3//0.7
+#define STRENGTH 0.12//0.1
 #define FAR_VAL 4.0
 
 layout (location = 0) in vec3 position;
@@ -46,7 +46,7 @@ void main()
     float distanceFactor = FAR_VAL / (FAR_VAL + length(toPoint));
     float vis = STRENGTH*distanceFactor*dot(normalize(toPoint), normalize(globalNormal.xyz));
     if(vis>0)
-        colour = vec4(0,0,0, vis);
+        colour = vec4(0.0,0.0,0, vis);
     else
         gl_Position = vec4(0.0, 0.1, 0.2, 0.0);
 }

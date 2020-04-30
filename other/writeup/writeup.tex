@@ -8,7 +8,15 @@
 \usepackage{algorithm2e}
 \usepackage[T1]{fontenc}
 \usepackage[style=ieee]{biblatex}
-\usepackage{url}
+\usepackage{setspace}
+
+\usepackage{tikz}
+\usepackage{tkz-euclide}
+\usetkzobj{all}
+\usetikzlibrary{calc}
+
+\usepackage{geometry}
+\geometry{a4paper, left=1in, right=1in, top=1.5in, bottom=1.5in}
 
 \DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
 \DeclarePairedDelimiter{\norm}{\lVert}{\rVert}
@@ -20,13 +28,16 @@
 
 \begin{document}
 
-\title{Non-photorealistic Rendering Techniques}
+\title{Non-photorealistic Rendering using Real-time Weighted Silhouettes and Texture Generation}
 \author{Gabrielius Slakaitis}
 \date{\today}
 \maketitle
-
 \newpage
 
+\begin{spacing}{0}
+  \tableofcontents
+\end{spacing}
+\newpage
 
 This paper will present a range of techniques which draw arbitrary objects as watercolour paintings in real time. It explores a geometric approach in rendering the silhouettes of the objects, which categorises the edges that need to be drawn and culls the rest. I extend this technique to convey the lighting in the scene by dynamically varying edge weights, as well as investigate different approaches to remove edge cracking artifacts caused at the intersections of thick lines. I also present a texture generation method that provides a watercolour fill. Its idea is to generate a set of points tied to the surface of the mesh which act as anchors for texture generation. These points move naturally in the 3D scene and provide the desired temporal coherence when moving around the objects, but the 2D screen coordinates of these points can be used as parameters for the watercolour effect. Finally, I apply screen-space effects to give the illusion that the whole scene is on paper, completing the overall effect.
 
@@ -67,9 +78,9 @@ Even if this stage only happens at the start of the program, a very large number
 
 
 \subsection{Rendering the edge}
-Using line primitives to draw the silhouette in OpenGL leads to uncertainty. In some cases using a particular line width might not be supported by an implementation and if this happens, the closest supported width would be used. In fact most graphics APIs do not guarantee the ability to rasterize lines of any width other than one pixel. This means constructing the edges from triangles is the only reliable option as the exact dimensions can be accurately controlled. In addition, line joining is not supported, which leads to artifacts as shown in [figure] when drawing thick lines. There are several styles of line joins that could be used to fix this by adding caps between two lines \cite{Drakos1999}. However, they all rely on some knowledge about both the edges, and the GPU will not have this information since processing of each vertex is independent. To counter this problem I will modify and extend an algorithm described in \cite{Hughes2004}, using the vertex normal - which falls between the two quads in the crack - to generate the edge caps. This is the only mutual information available between edges.
+Using line primitives to draw the silhouette in OpenGL leads to uncertainty. In some cases using a particular line width might not be supported by an implementation and if this happens, the closest supported width would be used. In fact most graphics APIs do not guarantee the ability to rasterize lines of any width other than one pixel. This means constructing the edges from triangles is the only reliable option as the exact dimensions can be accurately controlled. In addition, line joining is not supported, which leads to artifacts as shown in figure \ref{cap} when drawing thick lines. There are several styles of line joins that could be used to fix this by adding caps between two lines \cite{Drakos1999}. However, they all rely on some knowledge about both the edges, and the GPU will not have this information since processing of each vertex is independent. To counter this problem I will modify and extend an algorithm described in \cite{Hughes2004}, using the vertex normal - which falls between the two quads in the crack - to generate the edge caps. This is the only mutual information available between edges.
 
-\begin{figure}
+\begin{figure}[htbp!]
   \centering
   \begin{subfigure}{0.2\columnwidth}
     \includegraphics[width=\textwidth]{figures/1_1.png}
@@ -78,15 +89,89 @@ Using line primitives to draw the silhouette in OpenGL leads to uncertainty. In 
     \includegraphics[width=\textwidth]{figures/1_2.png}
   \end{subfigure}
   \caption{Edge caps fix cracks caused by bold lines.}
+  \label{cap}
 \end{figure}
 
 Six points are required in order to draw an edge from triangles. The first four points form the main quad: with two points at the base of the line and the other two extruding perpendicular to the direction of the line. To retain the negative space of the object no matter the width of the line, the silhouette of the object should be drawn on the exterior. The last two points are used in order to draw the caps on either side and extend along the direction of the vertex normal. Since any two adjacent edges will share this vertex and its normal, this will be a common point between them, so long as they are extended by the same amount. In any of these cases the magnitude of extrusion will depend on the lighting calculations.
 
 The required attributes for every vertex passed into the shader are ($v$, $v'$, $n$, $n_A$, $n_B$, $i$) where $v$, $v'$ are the vertices at the base of the edge; $n$ is the vertex normal; $n_A$, $n_B$ are the adjacent face normals and $i$ is an integer between 0 and 2 determining whether this vertex represents the base, the roof or the cap of the edge. Note that $i$ only represents the type of the vertex, whereas which end of the edge it will be on is determined by which end the $v$ and the corresponding $n$ are.
 
+\begin{figure}[htbp!]
+  \centering
+  \begin{tikzpicture}
+    \def\size{0.06}
+    \coordinate (A) at ( 0.0, 0.0);
+    \coordinate (B) at ( 0.4, 0.8);
+    \coordinate (C) at (-1.5,-0.2);
+    \coordinate (D) at ( 1.9,-0.4);
+    \coordinate (NV)  at (-0.2, 0.68);
+    \coordinate (NV') at ( 0.1, 0.7);
+    \coordinate (NA)  at (-0.35, 0.62);
+    \coordinate (NB)  at ( 0.45, 0.55);
+    \fill[color=black!8!white] (A) -- (C) -- (B) -- (D);
+    \fill[color=black] (A) circle (\size); \fill[color=black] (B) circle (\size); \fill[color=black] (C) circle (\size); \fill[color=black] (D) circle (\size);
+    \draw[thick] (A) node[anchor=80]{$v$} -- (B) node[anchor=-160]{$v'$} -- (C) -- (A) -- (D) -- (B);
+    \draw[thick,->] (A) -- ($(A)+(NV)$) node[pos=1.3]{$n$};
+    \draw[thick,->] (B) -- ($(B)+(NV')$);%node[anchor=-110]{$n_B$};
+    \draw[thick,->] ($0.38*(B)+0.62*(C)-0.2*(NA)$) -- ($0.38*(B)+0.62*(C)+0.8*(NA)$) node[pos=1.3]{$n_A$};
+    \draw[thick,->] ($0.38*(B)+0.62*(D)-0.2*(NB)$) -- ($0.38*(B)+0.62*(D)+0.8*(NB)$) node[pos=1.3]{$n_B$};
+    \node at ($1/3*(A)+1/3*(B)+1/3*(C)$) {$A$};
+    \node at ($1/3*(A)+1/3*(B)+1/3*(D)$) {$B$};
+  \end{tikzpicture}
+  \caption{Attributes of the edge.}
+  \label{info}
+\end{figure}
+
 The first thing that the shader has to work out is the weight of the line. Usually the intuitive way to calculate the lighting is to use the face normal: the further away from the light a face is, the darker it will be drawn. In this case an edge sits in the middle between two faces, so it is natural to take the average of the face normals - call this the edge normal. Then the standard calculation can be applied: $w = light \cdot normal$. Parameters can be used to take this value from [-1, 1] to the desired range.
 
 Each one of the six vertices passed into the shader will represent a point of the edge depending on their kind $i$. The first step of the shader is to calculate the screen coordinates of  $v$, $v'$ and the vector $n$. These will be represented as $s$, $s'$ and $m$. If the type of the vertex is the base of the edge, $i=0$, then the final position is simply $s$. Otherwise the shader calculates the line direction vector $s'-s$, and its perpendicular - $p$, found by swapping the x and y coordinates of the direction vector and then negating the x coordinate. To ensure the quad extrudes away from the surface of the mesh, check that the direction of the edge normal (screen space version of $n_A+n_B$) and this perpendicular vector point in the same direction. If it is not the case, negate $p$. This perpendicular is normalized and multiplied by the weight of the line $w$, making its length $w$. If the type of the vertex is the roof, $i=1$, then the final position is $s+p$. Finally, if the vertex is the cap, $i=2$, the vector $m$ is lengthened to $w_v$ in a similar fashion and the final position becomes $s+v$. Note that we cannot use $w$ to extend the cap vertex, since this value will be different for the two joining edges. A mutual weight is calculated using the vertex normal rather than the edge normal, which will have a value between the two edge weights, creating a smooth transition.
+
+\begin{figure}[htbp!]
+  \centering
+  \begin{tikzpicture}
+    %line info
+    \def\len{3.5}
+    \def\theta{50}
+    \def\w{1}
+    \def\ratio{1.15}
+    \def\clenl{0.5}
+    \def\clenr{0.5}
+    \def\right{0.2}
+    %cap points
+    \coordinate (C)  at (-0.4,\w-0.15);
+    \coordinate (C') at (\len+0.5,\w-0.05);
+    %coordinates
+    \coordinate (B)  at (0,0);
+    \coordinate (R)  at (0,\w);
+    \coordinate (B') at (\len,0);
+    \coordinate (R') at (\len,\w);
+    \coordinate (N)  at ({-\w/\ratio*sin(\theta)},{\w/\ratio*cos(\theta)});
+    \coordinate (N') at ({\len+\w*\ratio*sin(\theta)},{\w*\ratio*cos(\theta)});
+    %fill
+    \fill[color=black!8!white] (B)  rectangle (R');
+    \fill[color=black!8!white] (R)  -- (C)  -- (B);
+    \fill[color=black!8!white] (R') -- (C') -- (B');
+    %draw edges
+    \draw[thick] (B)  rectangle (R');
+    \draw[thick] (B)  -- (N);
+    \draw[thick] (B') -- (N');
+    \foreach \x/\y in {0/0,{-\w/\ratio*sin(\theta)}/{\w/\ratio*cos(\theta)}}{
+        \draw[thick] ({\x},{\y}) -- ({\x-\clenl*cos(\theta)},{\y-\clenl*sin(\theta)});
+        \draw[thick,dashed] ({\x-\clenl*cos(\theta)},{\y-\clenl*sin(\theta)}) -- ({\x-\clenl*2*cos(\theta)},{\y-\clenl*2*sin(\theta)});}
+    \foreach \x/\y in {\len/0,{\len+\w*\ratio*sin(\theta)}/{\w*\ratio*cos(\theta)}}{
+        \draw[thick] ({\x},{\y}) -- ({\x+\clenr*cos(\theta)},{\y-\clenr*sin(\theta)});
+        \draw[thick,dashed] ({\x+\clenr*cos(\theta)},{\y-\clenr*sin(\theta)}) -- ({\x+\clenr*2*cos(\theta)},{\y-\clenr*2*sin(\theta)});}
+    \draw[thick] (R)  -- (C)  -- (B)  node[anchor=90+\theta/2]{$s$};
+    \draw[thick] (R') -- (C') -- (B') node[anchor=90-\theta/2]{$s'$};
+    \draw[thick] (N)  -- (C);
+    \draw[thick] (N') -- (C');
+    %draw arrows
+    \draw[thick,->] ({0.62*\len},0) -- ({0.62*\len},{1.62*\w}) node[anchor=south]{$p$};
+    \draw[thick] ({0.62*\len},\right) -- ({0.62*\len+\right},\right) -- ({0.62*\len+\right},0);
+    \draw[thick,->] (B) -- ($(B)+1.62*(C)$) node[anchor=-90+\theta/2]{$m$};
+  \end{tikzpicture}
+  \caption{Rendering the edge and its corresponding caps.}
+\end{figure}
 
 One slightly tedious consideration concerns the fact that the screen coordinates range from -1 to 1 for both x and y coordinates, no matter the aspect ratio. The ratio itself is therefore also passed into the shader and the screen coordinates are modified accordingly.
 
@@ -98,37 +183,115 @@ Note that it does not matter whether $v$ or $v'$ are used in this formula, so th
 
 
 \subsection{Alternative solutions}
-The algorithm for construction edges and caps in the given way is not perfect in all scenarios. A particular edge of the model has a constant width from one side to the other. This is exactly what is required when drawing low poly objects where straight lines do in fact represent a flat surface, but not always satisfactory when trying to represent a smooth curve seen in [figure].
+The algorithm for construction edges and caps in the given way is not perfect in all scenarios. A particular edge of the model has a constant width from one side to the other. This is exactly what is required when drawing low poly objects where straight lines do in fact represent a flat surface, but not always satisfactory when trying to represent a smooth curve.
 
 \paragraph{Vertex-based weights.}
-This is a direct translation of the Gouraud shading method, which is usually used to render faces by calculating the colour value at each vertex and interpolating across. Similarly, this alternate method uses the weight value calculated using the vertex normals and extending the roof of the edge accordingly. The result is shown in [figure].
+This is a direct translation of the Gouraud shading method, which is usually used to render faces by calculating the colour value at each vertex and interpolating across. Similarly, this alternate method uses the weight value calculated using the vertex normals and extending the roof of the edge accordingly. The result is shown in figure \ref{smooth}.
 
-\begin{figure}
+\begin{figure}[htbp!]
   \centering
   \begin{subfigure}{0.3\columnwidth}
-    \includegraphics[width=\textwidth]{figures/2_1.png}
+    \includegraphics[width=\textwidth]{figures/2_1f.png}
+    \caption{Regular}
   \end{subfigure}
   \begin{subfigure}{0.3\columnwidth}
-    \includegraphics[width=\textwidth]{figures/2_2.png}
+    \includegraphics[width=\textwidth]{figures/2_2f.png}
+    \caption{Vertex-based}
   \end{subfigure}
-  \caption{Regular weights exhibit steps. Vertex-based weights appear smooth.}
+  \caption{Avoiding steps using an alternative weight method.}
+  \label{smooth}
 \end{figure}
 
 
 Going further in the same direction leads to an easy optimisation. Since in this method the cap vertex and the roof vertex extend from the base by the same amount we can  completely get rid of the roof vertices and  construct the whole edge out of just the four points. Understandably, due to the fact that the vector n is not perpendicular to the edge, the width of the line will be lower as compared to having the roof. In practice this is not a problem - especially since this method will be used when the shape is smooth, and the angle between n and p low.
 
-While this is a great improvement, there is still an issue present in this result relating to smooth surfaces. Each edge in the mesh has some weight value attached to it, depending on its direction to the light. The result of edge culling means that we can only see an edge if it's on the very silhouette of the mesh. Rotating around an object, at some point in time the current edge on the silhouette would be completely hidden behind a face and a new edge would emerge as the silhouette. Since this edge would have a distinct value to the previous one, there would be a point in time when the silhouette jumps in width. Clearly this is an issue for the original method too. Once again, this could be the desired effect when considering low-poly objects, but not when we want something to appear smooth. This artifact is also seen in still images when there's added curvature in the mesh, as in [figure]. At certain points a sudden switch occurs between the light value of the edges on this curved mesh. This artifact strongly depends on the model shape, how its lines are organised, the point of view and the position of the light, but it still breaks continuity in some cases.
+\begin{figure}[htbp!]
+  \centering
+  \begin{tikzpicture}
+    %line info
+    \def\len{3}
+    \def\theta{30}
+    \def\w{1}
+    \def\ratio{1.15}
+    \def\clenl{0.5}
+    \def\clenr{0.5}
+    \def\right{0.2}
+    %cap points
+    \coordinate (C)  at (-0.4,\w-0.15);
+    \coordinate (C') at (\len+0.5,\w-0.05);
+    %coordinates
+    \coordinate (B)  at (0,0);
+    \coordinate (B') at (\len,0);
+    \coordinate (N)  at ({-\w/\ratio*sin(\theta)},{\w/\ratio*cos(\theta)});
+    \coordinate (N') at ({\len+\w*\ratio*sin(\theta)},{\w*\ratio*cos(\theta)});
+    %fill
+    \fill[color=black!8!white] (B) -- (C) -- (C') -- (B') -- cycle;
+    %draw edges
+    \draw[thick] (B) node[anchor=90+\theta/2]{$s$} -- (C) -- (C') -- (B') node[anchor=90-\theta/2]{$s'$} -- cycle;
+    \foreach \x/\y [count = \i] in {0/0,{-0.4}/{\w-0.15}}{
+        \def\ttheta{\theta+(\i-1)*5}
+        \def\tlen{(\clenl+(\i-1)*0.06)}
+        \draw[thick] ({\x},{\y}) -- ({\x-\tlen*cos(\ttheta)},{\y-\tlen*sin(\ttheta)});
+        \draw[thick,dashed] ({\x-\tlen*cos(\ttheta)},{\y-\tlen*sin(\ttheta)}) -- ({\x-\tlen*2*cos(\ttheta)},{\y-\tlen*2*sin(\ttheta)});}
+    \foreach \x/\y [count = \i] in {\len/0,{\len+0.5}/{\w-0.05}}{
+        \def\ttheta{\theta-(\i-1)*5}
+        \def\tlen{(\clenr+(\i-1)*0.06)}
+        \draw[thick] ({\x},{\y}) -- ({\x+\tlen*cos(\ttheta)},{\y-\tlen*sin(\ttheta)});
+        \draw[thick,dashed] ({\x+\tlen*cos(\ttheta)},{\y-\tlen*sin(\ttheta)}) -- ({\x+\tlen*2*cos(\ttheta)},{\y-\tlen*2*sin(\ttheta)});}
+    %draw arrows
+    \draw[thick,->] (B)  -- ($(B)+1.62*(C)$) node[anchor=-90+\theta/2]{$m$};
+    \draw[thick,->] (B') -- ($1.62*(C')-0.62*(B')$);
+  \end{tikzpicture}
+  \caption{Rendering an edge using vertex-based weights.}
+\end{figure}
+
+
+While this is a great improvement, there is still an issue present in this result relating to smooth surfaces. Each edge in the mesh has some weight value attached to it, depending on its direction to the light. The result of edge culling means that we can only see an edge if it's on the very silhouette of the mesh. Rotating around an object, at some point in time the current edge on the silhouette would be completely hidden behind a face and a new edge would emerge as the silhouette. Since this edge would have a distinct value to the previous one, there would be a point in time when the silhouette jumps in width. Clearly this is an issue for the original method too. Once again, this could be the desired effect when considering low-poly objects, but not when we want something to appear smooth. This artifact is also seen in still images when there's added curvature in the mesh, as in figure \ref{turn}. At certain points a sudden switch occurs between the light value of the edges on this curved mesh. This artifact strongly depends on the model shape, how its lines are organised, the point of view and the position of the light, but it still breaks continuity in some cases.
 
 \paragraph{Tangent-based weights.}
-In order to make the edges independent from their weight, edge normals or vertex normals cannot be used for the lighting calculation. Instead, the position of the eye and in relation to the edge proves to be helpful. The vector describing the gaze from the eye to a particular point of the mesh can be easily found. Imagining the surface of the mesh to be infinitely smooth, no matter the position of the eye, the normal vector on the silhouette will be exactly perpendicular to the this gaze [figure]. To fully define this normal in three dimensions it needs another parameter. The direction of the edge itself can be used for this, since the normal has to be perpendicular to this edge. Now we can express this normal formally:
+In order to make the edges independent from their weight, edge normals or vertex normals cannot be used for the lighting calculation. Instead, the position of the eye and in relation to the edge proves to be helpful. The vector describing the gaze from the eye to a particular point of the mesh can be easily found. Imagining the surface of the mesh to be infinitely smooth, no matter the position of the eye, the normal vector on the silhouette will be exactly perpendicular to the this gaze, figure \ref{gaze}. To fully define this normal in three dimensions it needs another parameter. The direction of the edge itself can be used for this, since the normal has to be perpendicular to this edge. Now we can express this normal formally:
 $$(v-eye) \times (v-v_2)$$
-This indeed solves the artifact (and there is an added benefit that the vertex normal is not needed as a parameter), however the problem of every edge having a uniform weight throughout its length reappears.  This leads to the same steps on the curve as seen in the original method [figure]. Sadly this problem is not easily fixed. It would be intuitive to use the vertex normals in order to calculate this perpendicular instead of the direction of the edge in order to remove these steps. In fact, the calculation for the vector would then become
+
+\begin{figure}[htbp!]
+  \centering
+  \begin{tikzpicture}
+    \pgfmathsetmacro{\arrowlen}{0.8}
+    \pgfmathsetmacro{\right}{0.2}
+    \pgfmathsetmacro{\eyeX}{-3.1}
+    \pgfmathsetmacro{\eyeY}{-0.7}
+    \def\len{sqrt(\eyeX*\eyeX+\eyeY*\eyeY)}
+    \coordinate (E) at (\eyeX, \eyeY);
+    \coordinate (OE) at ({\eyeX/\len},{\eyeY/\len});
+    \coordinate (OP) at ({\eyeY/\len}, {-\eyeX/\len});
+    \draw[thick,dotted] (E) -- (0,0);
+    \draw[thick,->] (0,0) -- ($\arrowlen*(OP)$);
+    \draw[thick] ($\right*(OE)$) -- ($\right*(OE)+\right*(OP)$) -- ($\right*(OP)$);
+    %\draw[thick] plot[smooth cycle,tension=0.7] coordinates {(0,0) (0.9,-0.3) (1.1,-1.3) (0.4,-2) (-0.5,-2.1) (-0.9,-1.8) (-0.5,-1.2) (-0.6,-0.5)};
+    \fill[color=black!8!white] plot[smooth cycle,tension=0.7] coordinates {(0,0) (0.63,-0.21) (0.77,-0.91) (0.28,-1.4) (-0.35,-1.47) (-0.63,-1.26) (-0.35,-0.84) (-0.42,-0.35)};
+    \draw[thick] plot[smooth cycle,tension=0.7] coordinates {(0,0) (0.63,-0.21) (0.77,-0.91) (0.28,-1.4) (-0.35,-1.47) (-0.63,-1.26) (-0.35,-0.84) (-0.42,-0.35)};
+    \pgfmathsetmacro{\eye}{0.37}
+    \pgfmathsetmacro{\width}{22}
+    \def\angle{atan(\eyeY/\eyeX)}
+    \coordinate (B) at ($(E)+\eye*(OE)$);
+    \coordinate (L) at ({cos(\angle-\width)},{sin(\angle-\width)});
+    \coordinate (U) at ({cos(\angle+\width)},{sin(\angle+\width)});
+    \draw[thick] ($(B)+1.2*\eye*(L)$) -- (B) -- ($(B)+1.2*\eye*(U)$) node[anchor=-90]{$eye$};
+    \draw[thick] (E) arc (\angle:\angle+\width:\eye);
+    \draw[thick] (E) arc (\angle:\angle-\width:\eye);
+    \fill[color=black] ($(E)+0.05*(OE)$) circle (0.07);
+  \end{tikzpicture}
+  \caption{For a smooth shape the normal is always perpendicular to the tangent from the eye.}
+  \label{gaze}
+\end{figure}
+
+
+This indeed solves the artifact (and there is an added benefit that the vertex normal is not needed as a parameter), however the problem of every edge having a uniform weight throughout its length reappears.  This leads to the same steps on the curve as seen in the original method. Sadly this problem is not easily fixed. It would be intuitive to use the vertex normals in order to calculate this perpendicular instead of the direction of the edge in order to remove these steps. In fact, the calculation for the vector would then become
 $$(v-eye) \times [n \times (v-eye)]$$
 rewritten to reduce shader computation as
 $$[(v-eye) \cdot (v-eye)]n - [(v-eye) \cdot v](v-eye)$$
 However this brings back the dependency of the vertex normals and the original artifact comes back, rendering the intuition invalid.
 
-\begin{figure}
+\begin{figure}[htbp!]
   \centering
   \begin{subfigure}{0.3\columnwidth}
     \includegraphics[width=\textwidth]{figures/3_1.png}
@@ -143,6 +306,7 @@ However this brings back the dependency of the vertex normals and the original a
     \caption{Tangent-based}
   \end{subfigure}
   \caption{Artifact due to edge dependant calculations.}
+  \label{turn}
 \end{figure}
 
 
@@ -155,9 +319,9 @@ Both of the vertex-based and tangent-based methods would eventually lead to perf
 \subsection{Covered edges}
 Some of the edges that are seen using this silhouette method lay on the opposite side of the mesh to the eye. These edges should not be visible as they give away detail that is hidden by the object itself, yet they satisfy the specification of one normal facing towards and the other facing away from the position of the eye. In addition, If several objects are rendered like this, they will not obstruct each other and appear see-through. While sometimes this might be a nice effect, often times it leads to uncertainty in which part of the scene is closer, and even what direction an object is facing. A technique described in \cite{Rossignac1992} will be employed in order to hide these unwanted edges by using the depth buffer (sometimes also called z-buffer).
 
-When a primitive is rendered to the screen, the depth buffer stores how far each fragment is from the screen. The further away, the higher the value. This includes the silhouette edges, since their depth values are kept when the screen coordinates for each vertex are calculated. A first pass in the shader renders all of the faces of the object before the silhouette as seen in [figure (a)]. During the pass, the depth buffer values are set accordingly for each fragment. Now when the silhouette as in [figure (b)] is drawn in a second pass, a depth test is applied. Silhouette edges that are behind an object will have a higher depth value than the one stored by the previous pass, and will not be rendered, leading to the result shown in [figure (c)].
+When a primitive is rendered to the screen, the depth buffer stores how far each fragment is from the screen. The further away, the higher the value. This includes the silhouette edges, since their depth values are kept when the screen coordinates for each vertex are calculated. A first pass in the shader renders all of the faces of the object before the silhouette as seen in figure \ref{cover}(a). During the pass, the depth buffer values are set accordingly for each fragment. Now when the silhouette as in figure \ref{cover}(b) is drawn in a second pass, a depth test is applied. Silhouette edges that are behind an object will have a higher depth value than the one stored by the previous pass, and will not be rendered, leading to the result shown in figure \ref{cover}(c).
 
-\begin{figure}
+\begin{figure}[htbp!]
   \centering
   \begin{subfigure}{0.3\columnwidth}
     \includegraphics[width=\textwidth]{figures/4_2.png}
@@ -174,6 +338,7 @@ When a primitive is rendered to the screen, the depth buffer stores how far each
     \caption{Combined}
   \end{subfigure}
   \caption{Two passes hide covered edges using the depth buffer.}
+  \label{cover}
 \end{figure}
 
 
@@ -183,20 +348,21 @@ As seen in the result, this has a side-effect of giving some colour to an object
 
 
 \subsection{Comments}
-Using the geometric method allows us to cull unwanted edges and process their parameters in order to get the exact weights for every part of the mesh, no matter what the object is. Considering this, the geometric approach has its own disadvantages. In particular, any edge of the mesh is either drawn or culled; there is no medium value. This can lead to a jittery look if a model contains a silhouette that ends on the model. The exact point it ends on can only be where one of the edges end, and a small change in the viewing angle might lead to a new edge abruptly appearing to extend this line. In addition, looking at an inner corner of an object often leads to cases where the exact silhouette cannot be expressed as a subset of edges, exemplified in [figure]. These errors are intrinsic to the way meshes are used in describing objects and are hard to smooth out without knowledge of the surrounding edges. Only by making these meshes smoother will these effects start to disappear and converge towards the desired result. One approach in dealing with such cases is described in \cite{Brosz2004}, where the stability of each silhouette edge is measured based on how likely it is to disappear, and less stable edges can be drawn with a lighter value. Although, this stability sometimes gives unintuitive results, since an edge might be likely to disappear and be replaced by a different edge, but the line itself is unlikely to disappear from the image.
+Using the geometric method allows us to cull unwanted edges and process their parameters in order to get the exact weights for every part of the mesh, no matter what the object is. Considering this, the geometric approach has its own disadvantages. In particular, any edge of the mesh is either drawn or culled; there is no medium value. This can lead to a jittery look if a model contains a silhouette that ends on the model. The exact point it ends on can only be where one of the edges end, and a small change in the viewing angle might lead to a new edge abruptly appearing to extend this line. In addition, looking at an inner corner of an object often leads to cases where the exact silhouette cannot be expressed as a subset of edges, exemplified in figure \ref{inner}. These errors are intrinsic to the way meshes are used in describing objects and are hard to smooth out without knowledge of the surrounding edges. Only by making these meshes smoother will these effects start to disappear and converge towards the desired result. One approach in dealing with such cases is described in \cite{Brosz2004}, where the stability of each silhouette edge is measured based on how likely it is to disappear, and less stable edges can be drawn with a lighter value. Although, this stability sometimes gives unintuitive results, since an edge might be likely to disappear and be replaced by a different edge, but the line itself is unlikely to disappear from the image.
 
-\begin{figure}
+\begin{figure}[htbp!]
   \centering
   \begin{subfigure}{0.3\columnwidth}
-    \includegraphics[width=\textwidth]{figures/5_1.png}
+    \includegraphics[width=\textwidth]{figures/5_1f.png}
   \end{subfigure}
   \begin{subfigure}{0.3\columnwidth}
-    \includegraphics[width=\textwidth]{figures/5_2.png}
+    \includegraphics[width=\textwidth]{figures/5_2f.png}
   \end{subfigure}
   \caption{Another artifact due to geometric nature of the method, seen on an inner corner of a mesh. A simple fix increases the depth value of silhouette edges, bringing them behind the immediate fill.}
+  \label{inner}
 \end{figure}
 
-Another point to make is that here only silhouette edges are considered. If a particular model required more detail, then analyzing other feature edges might be useful. An obvious example of such edges are crease edges, which are defined by their neighbouring faces differing above some critical angle. Such faces could be calculated in the preprocessing of the mesh and then marked, leading to these edges always being visible (unless of course they are covered by the mesh). In our system an edge could be marked by setting the normals of the adjacent faces to be the negative of each other. In this case exclusively one of them is guaranteed to face the camera and satisfy the silhouette definition. This means the same shader program can be used as described. There is one issue with using exactly the same method though. When rendering the weight of the line, it is extruded perpendicular to the edge and towards its normal. For silhouette edges this is always the exterior of the object, however for an arbitrary edge it might change depending on the angle, leading to the direction of extrusion abruptly reversing when moving over the edge normal. Of course, the system can be altered to have every silhouette extrude in both directions from the edge. In this case the edge cap techniques would have to be adapted to extrude the quad in both directions and get rid of cracks on the inside of the shape*.
+Another point to make is that here only silhouette edges are considered. If a particular model required more detail, then analyzing other feature edges might be useful. An obvious example of such edges are crease edges, which are defined by their neighbouring faces differing above some critical angle. Such faces could be calculated in the preprocessing of the mesh and then marked, leading to these edges always being visible (unless of course they are covered by the mesh). In our system an edge could be marked by setting the normals of the adjacent faces to be the negative of each other. In this case exclusively one of them is guaranteed to face the camera and satisfy the silhouette definition. This means the same shader program can be used as described. There is one issue with using exactly the same method though. When rendering the weight of the line, it is extruded perpendicular to the edge and towards its normal. For silhouette edges this is always the exterior of the object, however for an arbitrary edge it might change depending on the angle, leading to the direction of extrusion abruptly reversing when moving over the edge normal. Of course, the system can be altered to have every silhouette extrude in both directions from the edge. In this case the edge cap techniques would have to be adapted to extrude the quad in both directions and get rid of cracks on the inside of the shape (this is straightforward for the vertex-based approach).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -205,7 +371,7 @@ Another point to make is that here only silhouette edges are considered. If a pa
 
 The second stage of the shader will add a watercolour fill to the objects. A set of anchor-points will be generated that represent key areas of the fill. Over each of these points in screen space, some brush-texture will be placed, as if to simulate an artist putting the paintbrush down in that location. The textures will be cropped to the object in order to remain within its bounds, to make sure it correctly represents the object. The normals of the anchor-points will also be considered to determine whether a particular detail should be visible; it would be wrong to see details of the object that lay on a back-face. Due to this, special consideration also has to be taken for brush-textures close to the silhouette of the object, since up to half of the texture may still be visible at the instance where the anchor-point turns away from the camera.
 
-\begin{figure}
+\begin{figure}[htbp!]
   \centering
   \begin{subfigure}{0.2\columnwidth}
     \includegraphics[width=\textwidth]{figures/6_1.png}
@@ -274,7 +440,7 @@ In addition to the coordinates, the points can carry additional information that
 \subsection{Points in the shader}
 The actual colour of the object will be determined by the previous rendering stage, where the object was rendered on top of the silhouette to cover unseen edges. In this demonstration, the texture will be generated by placing a square brush-texture on each one of the anchor points. This will be done by passing four vertices into the vertex shader that represent a square centered on an anchor-point, and the texture can then be placed on this square using two triangle primitives.
 
-For each of the four vertices passed into the shader, define attributes ($v$, $n$, $i$) where $v$ is the position; $n$ is its normal and $i$ is an integer between 0 and 3 determining which corner of the square the vertex will represent. Calculating the positions of the vertices is trivial: transform the position $v$ into screen space and, depending on the value of $i$, add or take away some constant from the x and y coordinates to make it the correct corner. It follows automatically that anchor-points further away appear smaller, as the w-value of the coordinate will not be changed so the constant will be divided by a larger value when further from the eye position*. Along with the list of four vertices we will pass an index list [0, 1, 3, 0, 3, 2] that specifies the two triangles to be drawn. Since a texture is being applied, the vertex shader has to also pass the appropriate texture coordinates to the fragment shader for each of the vertices, which are simply the four texture corners depending on $i$.
+For each of the four vertices passed into the shader, define attributes ($v$, $n$, $i$) where $v$ is the position; $n$ is its normal and $i$ is an integer between 0 and 3 determining which corner of the square the vertex will represent. Calculating the positions of the vertices is trivial: transform the position $v$ into screen space and, depending on the value of $i$, add or take away some constant from the x and y coordinates to make it the correct corner. It follows automatically that anchor-points further away appear smaller, as the w-value of the coordinate will not be changed, so the constant will be divided by a larger value when further from the eye position. Along with the list of four vertices we will pass an index list [0, 1, 3, 0, 3, 2] that specifies the two triangles to be drawn. Since a texture is being applied, the vertex shader has to also pass the appropriate texture coordinates to the fragment shader for each of the vertices, which are simply the four texture corners depending on $i$.
 
 
 \subsection{Transparency}
@@ -290,7 +456,7 @@ One result that has to be considered is that drawing order of transparent object
 \subsection{Visibility control}
 In a sense, the anchor-points that are being considered lay on the surface of the mesh, so when an object is seen, the points on the rear side of the mesh should not be visible as they are hidden. If the texture were to keep all of these points, rotating around an object would cause the anchor-points attached to the front of the object to move appropriately, but the ones on the rear side would move in the complete opposite direction at the same time. This would look very unnatural, making it difficult to tell in which direction the rotation is happening in. For this reason, anchor-points obstructed by the mesh should not be visible.
 
-One way to consider hiding these points is to apply a similar technique as for the silhouette. The depth buffer values of a simple render of the object can be used to cover squares that are behind the front of the object. However this can lead to sections of squares being clipped off, leading to harsh artifacts, demonstrated in [figure]. To avoid this, the depth testing will be disabled when rendering these brush-textures and a different approach will be used.
+One way to consider hiding these points is to apply a similar technique as for the silhouette. The depth buffer values of a simple render of the object can be used to cover squares that are behind the front of the object. However this can lead to sections of squares being clipped off, leading to harsh artifacts. To avoid this, the depth testing will be disabled when rendering these brush-textures and a different approach will be used.
 
 In this method, normals of the anchor-points will be used to determine their visibility. If the normal is facing away from the eye position, then clearly the anchor point is not visible and should not be considered in texture generation. However, simply setting the visibility of these points to 0 would lead to an unwanted effect. Imagining an anchor-point on the edge of an object, there will be some point where it turns from being visible to hidden. At this point half of the brush-texture will still be on the object, and it will lead to a sudden disappearance of this texture. Many points exhibiting such an effect would cause many flickers at the edges of the object as textures pop in and out of view. To fix this, the texture will be faded away as it gets closer to the edge. The magnitude of this fade is determined using the normal once again - facing further from the eye will make the visibility decrease:
 $$[v-eye]_n \cdot normal$$
@@ -298,7 +464,7 @@ where $[\cdot]_n$ represents the normalisation function. Since OpenGL treats neg
 
 To speed up performance it is possible to transform the points with visibility lower than 0 behind the clipping plane (in a similar fashion to the unwanted silhouette edges), so they're not even considered in rasterisation.
 
-A final consideration is that as the object gets further away, the brush-textures will get smaller in turn. This is not sensible after a certain level, as the texturing of a watercolour drawing wouldn't get finer for smaller objects. This could be tackled in a similar way to \cite{Praun2001}, where custom mip-maps are used to render far objects. In this approach, each larger mip-map level is a superset of every smaller level, which ensures that the transitions remain smooth. Similarly, every anchor-point could have attached to it an extra value which would represent its level. When looking at a far away object, only the anchor-points with a high enough level would be visible and moving closer would fade in the points of the lower levels*. This would allow the anchor-points to retain their size no matter the distance, however, this technique is beyond the scope of this paper. As an easy fix, the far anchor-points will simply reduce in opacity to fix the issue. While this will mean that large objects that are far away will have little texture, in most cases this is acceptable. The final opacity calculation is:
+A final consideration is that as the object gets further away, the brush-textures will get smaller in turn. This is not sensible after a certain level, as the texturing of a watercolour drawing wouldn't get finer for smaller objects. This could be tackled in a similar way to \cite{Praun2001}, where custom mip-maps are used to render far objects. In this approach, each larger mip-map level is a superset of every smaller level, which ensures that the transitions remain smooth. Similarly, every anchor-point could have attached to it an extra value which would represent its level. When looking at a far away object, only the anchor-points with a high enough level would be visible and moving closer would fade in the points of the lower levels. This would allow the anchor-points to retain their size no matter the distance, however, this technique is beyond the scope of this paper. As an easy fix, the far anchor-points will simply reduce in opacity to fix the issue. While this will mean that large objects that are far away will have little texture, in most cases this is acceptable. The final opacity calculation is:
 $$strength \times \norm{v-eye} \times ([v-eye]_n \cdot normal)$$
 
 
@@ -316,7 +482,7 @@ The test is passed if the value in the buffer is equal 1. 0xFF means that we don
 There is an issue that arises when multiple objects are drawn using the same stencil buffer. The buffer specifies the areas of both objects as valid, so when an anchor-point is on the edge of one object, the corresponding texture may bleed out and be visible on the other object, which is especially visible when moving. This is not difficult to correct. Each object will be assigned an id, and this id will be used when populating the values of the stencil buffer for that particular object instead of just 1. This provides another case where we need to check that the depth test has passed before updating the stencil values, since the stencil buffer should only hold the id of an object if it is in front of all the others. Now, when drawing brush-textures for a particular object, the stencil test becomes:
 $$\texttt{glStencilFunc(GL\_EQUAL, id, 0xFF)\;}$$
 
-\begin{figure}
+\begin{figure}[htbp!]
   \centering
   \begin{subfigure}{0.5\columnwidth}
     \includegraphics[width=\textwidth]{figures/7_1.png}
@@ -350,18 +516,18 @@ As an optimisation, this test could be done in the vertex shader, making it per-
 
 Keep in mind that this only ensures that no hidden points are ever visible, but the fading of vertices is still necessary to maintain temporal coherence. For points close to the silhouette we can use the same technique as before where the normal of the anchor-point effects the visibility, however this would not fade anchor-points that suddenly emerge from behind an obstruction. A more general method for texture fading would involve taking multiple samples in the depth buffer texture close to the position of the anchor-point. The visibility would then be determined by the proportion of the points that pass the depth test. To avoid sample depth tests failing due to local curvature a slightly larger extrusion can be applied.
 
-\begin{figure}
+\begin{figure}[htbp!]
   \centering
   \includegraphics[width=0.5\columnwidth]{figures/8.png}
   \caption{Red samples pass the depth test, grey samples fail.}
 \end{figure}
 
 \paragraph{Object splitting.}
-The only viable way to fix the texture bleeding within the same object is to split it up into several. Indeed, if any mesh is split into purely convex sub-objects, neither of the mentioned artifacts will ever occur. The downside is that wherever the split happens there will be a harsh line even if we specify for the silhouette not to be drawn on the divide, since all of the textures on one side of the line will be cut from going to the other. This could be fixed in a few ways, including assigning the anchor-points close to the split both of the objects as valid, however even this wouldn't solve the issue for all angles. The best approach is to split the object only where a silhouette line would be welcome* and keep that from covering the texture interference. Here, even if the objects are just close to convex, the artifacts will be minimal.
+The only viable way to fix the texture bleeding within the same object is to split it up into several. Indeed, if any mesh is split into purely convex sub-objects, neither of the mentioned artifacts will ever occur. The downside is that wherever the split happens there will be a harsh line even if we specify for the silhouette not to be drawn on the divide, since all of the textures on one side of the line will be cut from going to the other. This could be fixed in a few ways, including assigning the anchor-points close to the split both of the objects as valid, however even this wouldn't solve the issue for all angles. The best approach is to split the object only where a silhouette line would be welcome and keep that from covering the texture interference. Here, even if the objects are just close to convex, the artifacts will be minimal.
 
 One of the key things about this approach is that the texture generation stage can take any form. In this paper I have discussed the method of putting brush textures over each one of the anchor-points, but this is not the only possibility as long as the anchor-point coordinates and strengths can be used as parameters (strength parameters are needed so that the fading technique would still function). The only requirement for texture generation is that the output is continuous. In other words, sufficiently small changes in the input of the texture generation algorithm should result in arbitrarily small changes in its result. These condition ensures that temporal locality is preserved. A simple example of an alternative texture generator would be a weighted Voronoi diagram, where the distance to a point is multiplied by the weight constant. While this does not provide a satisfying artistic effect, it acts a testament for more complex texture generators.
 
-\begin{figure}
+\begin{figure}[htbp!]
   \centering
   \begin{subfigure}{0.2\columnwidth}
     \includegraphics[width=\textwidth]{figures/9_1.png}
@@ -382,12 +548,18 @@ The following algorithms will apply effects to the whole screenspace, including 
 \subsection{Wobbling}
 When applying paint to paper, the resulting lines are not perfectly crisp; the grain in the paper causes pigments to drift in some sections \cite{Curtis1997}. For this effect, fragments may use the values of their neighbours, which simulates this pigment movement. The exact neighbour that is used is determined by the offset ($\mathit{off}_x$, $\mathit{off}_y$), taken from a paper normal map \cite{Nienhaus2005}. The new texture coordinates are calculated as:
 $$\begin{bmatrix}x'\\y'\end{bmatrix} = \begin{bmatrix}x\\y\end{bmatrix} + c\begin{bmatrix}\mathit{off}_x\\\mathit{off}_y\end{bmatrix}$$
-Here ($x$,$y$) are the original texture coordinates passed into the fragment shader, and ($x'$,$y'$) are the coordinates after distortion. The magnitude of the wobble effect is controlled by a constant $c$. The result can be seen in [figure]
+Here ($x$,$y$) are the original texture coordinates passed into the fragment shader, and ($x'$,$y'$) are the coordinates after distortion. The magnitude of the wobble effect is controlled by a constant $c$. The result can be seen in figure \ref{wobble}
 
-\begin{figure}
+\begin{figure}[htbp!]
   \centering
-  \includegraphics[width=0.5\columnwidth]{figures/10.png}
+  \begin{subfigure}{0.5\columnwidth}
+    \includegraphics[width=\textwidth]{figures/10r.png}
+  \end{subfigure}
+  \begin{subfigure}{0.3\columnwidth}
+    \includegraphics[width=\textwidth]{figures/10t.png}
+  \end{subfigure}
   \caption{Wobbling effect based on a paper normal map.}
+  \label{wobble}
 \end{figure}
 
 
@@ -398,10 +570,14 @@ This light value is multiplied by the pixel colour to get the final result. It c
 
 Now consider where the position of the light should actually be. After all, it would be a nice touch that when the light in the scene is coming from above the paper itself would be illuminated from the same direction. It would be nonsensical to work with world coordinates of the light, so there will have to be some processing. First the light position will be converted to screen coordinates, which represent where on the paper this light source is. This conversion will provide a depth value too, however using this new light position would make the screen completely black if this z value is behind the paper. Likewise, if the light is extremely close to the paper, the fragments on the edge of the screen will be at a sharp angle to the light, making them look unnaturally dark. To counter these effects, the z value of the screen coordinates will be set to some constant value which is a fair distance from the paper (3 is used in the figures). Additionally sharp angles might be created when the x or y coordinates of the light are very far from the screen, which leads to a very dark screen when the angle of the camera is close to 90 degrees from the light. To fix this, the x and y coordinates are clamped to a fixed range, so that they never become extreme, but still give enough of an effect (in the examples the range is [-2,2], where the coordinates on the screen itself are in [-1,1]). This light position will be computed at the start of every frame in the CPU, as the same position can be used in every fragment.
 
-\begin{figure}
+\begin{figure}[htbp!]
   \centering
-  \includegraphics[width=0.5\columnwidth]{figures/11.png}
-  \caption{Use of paper normal bump map.}
+  \begin{subfigure}{0.5\columnwidth}
+    \includegraphics[width=\textwidth]{figures/11r.png}
+  \end{subfigure}
+  \begin{subfigure}{0.3\columnwidth}
+    \includegraphics[width=\textwidth]{figures/11t.png}
+  \end{subfigure}  \caption{Use of paper normal bump map.}
 \end{figure}
 
 
@@ -422,7 +598,7 @@ These final effects look great for still images. However, while the change in li
 % make it clear what parameters are needed within shader
 Currently the system only deals with model transformations and the movement of the light source. However in many applications, meshes are rigged and skeletal animation can effect local areas of the mesh. The skeletal animation technique was first introduced in \cite{Thalmann1989} and is now used in most animation systems. A model is constructed from a regular mesh and a series of bones connected in a hierarchy. Key frames define how joints of this model move through time via local transformation matrices, and every frame transformation matrices for all bones can be interpolated. Each vertex has a set of weights that assign how the bones affect it, so the final position is determined by the weighted average of these transformations. Same methods could largely be applied for this system, but with a few considerations.
 
-When calculating the silhouette edges, the face normals are currently calculated in a preprocessing stage and passed into the shader for condition testing. In an rigged model however, different vertices will be transformed by different matrices, making the change in face normals unpredictable. For this reason each vertex of an edge would have to have the information on all four related vertices [figure] and calculate the face normals in the shader after transforming them accordingly. This would increase computation as each vertex would have to calculate four transformations.
+When calculating the silhouette edges, the face normals are currently calculated in a preprocessing stage and passed into the shader for condition testing. In an rigged model however, different vertices will be transformed by different matrices, making the change in face normals unpredictable. For this reason each vertex of an edge would have to have the information on all four related vertices (displayed in figure \ref{info}) and calculate the face normals in the shader after transforming them accordingly. This would increase computation as each vertex would have to calculate four transformations.
 
 Anchor-points would simply be treated as regular vertices. They would have to have the required parameters which determine the effect of each of the joint transformations on such a vertex. In particular, these weights can be determined by interpolating between the parameters of the anchor-point face vertices. If there is a limit of how many joints can affect a vertex, the least dominant ones may have to be discarded and remaining weights balanced. To avoid such preprocessing complexity an alternative would simply use the parameters of the closest existing vertex.
 
@@ -452,8 +628,19 @@ Clearly most of the performance is used in the edge generation. Rendering the mo
 \section{Conclusion}
 There are still certain differences between this approach and a more complex watercolour painting. First of all, the fill is always bounded by the outline of the object. In real work this is often not the case; artists intentionally make colour bleed out and blend objects together. Often this is not just random and serves some purpose to the piece, making it extremely hard to generate. On a similar note, an artist might choose to make some lines smaller, simply because they don't play an important role in the picture. While we can use heuristics for this - distant or small objects might be considered less important - it is almost impossible to give a believable effect in all cases without some extra information. Such heuristics would be interesting to analyse further.
 
-On the contrary, the system gives satisfying results as simple watercolour illustrations, executing in real-time. The lighting is well communicated in all scenes and the texture of the objects mimics watercolour closely. In addition all of the methods described are very flexible allowing many modifications to be made for alternative effects. The edge method based on \cite{Hughes2004} was adapted and improved to increase its efficiency. I have reduced the number of vertices passed into the shader for each edge from 10 to 6, and each vertex has to carry a smaller number of parameters in order to generate the edges*. In addition, this method avoids the edge cracking artefacts for all possible cases as well as providing alternative solutions which further increase quality and efficiency in some cases. My texture generation approach allows for perfect temporal coherence and consistency. The specific method of putting brush-textures over each anchor-point is simple, but provides extremely fast performance and satisfying transitions. The next main stage of the system would be to explore ways to increase the temporal coherence of the geometric edge method while keeping the calculations independent and not losing the current efficiency. Similarly, looking into alternative ways to apply the final wobble effect and bump map could further increase the continuity when moving around the objects.
+On the contrary, the system gives satisfying results as simple watercolour illustrations, executing in real-time. The lighting is well communicated in all scenes and the texture of the objects mimics watercolour closely. In addition all of the methods described are very flexible allowing many modifications to be made for alternative effects. The edge method based on \cite{Hughes2004} was adapted and improved to increase its efficiency. I have reduced the number of vertices passed into the shader for each edge from 10 to 6, and each vertex has to pass a smaller number of parameters in order to generate the edges. In addition, this method avoids the edge cracking artefacts for all possible cases as well as providing alternative solutions which further increase quality and efficiency in some cases. My texture generation approach allows for perfect temporal coherence and consistency. The specific method of putting brush-textures over each anchor-point is simple, but provides extremely fast performance and satisfying transitions. The next main stage of the system would be to explore ways to increase the temporal coherence of the geometric edge method while keeping the calculations independent and not losing the current efficiency. Similarly, looking into alternative ways to apply the final wobble effect and bump map could further increase the continuity when moving around the objects.
 
 \printbibliography
+
+\begin{figure}[htbp!]
+  \centering
+  \begin{subfigure}{0.6\columnwidth}
+    \includegraphics[width=\textwidth]{figures/ex1.png}
+  \end{subfigure}
+  \begin{subfigure}{0.6\columnwidth}
+    \includegraphics[width=\textwidth]{figures/ex2.png}
+  \end{subfigure}  \caption{Examples.}
+\end{figure}
+
 
 \end{document}
